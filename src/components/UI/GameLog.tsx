@@ -1,12 +1,13 @@
 // src/components/UI/GameLog.tsx
 import { useRef, useEffect } from 'react';
-import type { GameEvent } from '../../types/game';
+import type { GameEvent, Player } from '../../types/game';
 
 interface Props {
   events: GameEvent[];
+  players: Player[];
 }
 
-export default function GameLog({ events }: Props) {
+export default function GameLog({ events, players }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -14,6 +15,12 @@ export default function GameLog({ events }: Props) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [events]);
+
+  const getPlayerName = (playerId: string): string => {
+    if (playerId === 'system' || playerId === 'director') return playerId;
+    const player = players.find(p => p.id === playerId);
+    return player?.name || playerId;
+  };
 
   const getEventColor = (type: string, isPublic: boolean): string => {
     if (!isPublic) return 'text-text-muted/40 italic';
@@ -58,7 +65,10 @@ export default function GameLog({ events }: Props) {
             <span className="text-text-muted/40">[{event.round}]</span>{' '}
             <span className="mr-1">{getEventPrefix(event)}</span>
             {event.type === 'speech' && (
-              <span className="font-bold text-accent-amber">{event.actorId}: </span>
+              <span className="font-bold text-accent-amber">{getPlayerName(event.actorId)}: </span>
+            )}
+            {event.type === 'vote' && (
+              <span className="font-bold text-accent-amber">{getPlayerName(event.actorId)} </span>
             )}
             {event.content}
           </div>

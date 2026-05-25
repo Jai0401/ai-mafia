@@ -242,7 +242,7 @@ export default function Game({ apiKey, preConfiguredPlayers }: Props) {
       </div>
 
       <div className="h-48 p-4 pt-0 flex gap-4">
-        <div className="flex-1"><GameLog events={state.events} /></div>
+        <div className="flex-1"><GameLog events={state.events} players={state.players} /></div>
         {state.humanMode === 'player' && state.humanPlayerId && (
           <div className="w-64 bg-bg-room rounded-lg border border-text-muted/20 p-4 flex flex-col gap-2">
             <h3 className="font-display text-xs text-accent-amber uppercase tracking-wider">Your Turn</h3>

@@ -42,5 +42,8 @@ coverage/
 # Screenshots (dev artifacts)
 ai-mafia-*.png
 
+# Docs (design docs and plans)
+docs/
+
 # Misc
 .superpowers/
