@@ -242,7 +242,8 @@ export class GameEngine {
     await this.delay(1200);
 
     const state = this.getState();
-    const alivePlayers = state.players.filter((p) => p.isAlive);
+    // Shuffle speaking order each round so it's not always the same players first
+    const alivePlayers = this.shuffle(state.players.filter((p) => p.isAlive));
 
     for (const player of alivePlayers) {
       if (!this.isRunning) return;
