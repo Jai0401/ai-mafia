@@ -1,5 +1,5 @@
 // src/engine/GameEngine.ts
-import type { GameState, GameEvent, AgentState, Player, HumanMode } from "../types/game";
+import type { GameState, GameEvent, AgentState, Player, HumanMode, AgentBeliefs, BeliefEntry, AgentStateDiff } from "../types/game";
 import { AgentRunner } from './AgentRunner';
 import { resolveNightActions } from './ActionResolver';
 import { countVotes } from './VoteCounter';
@@ -19,6 +19,121 @@ export class GameEngine {
     this.dispatch = dispatch;
     this.getState = getState;
     this.agentRunner = new AgentRunner(apiKey);
+  }
+
+  private createInitialBeliefs(players: Player[]): AgentBeliefs {
+    const playerBeliefs: Record<string, BeliefEntry> = {};
+    players.forEach(p => {
+      playerBeliefs[p.id] = {
+        suspicion: 0.5,
+        reason: 'No information yet.',
+        suspectedRole: 'unknown',
+        lastUpdated: 1,
+      };
+    });
+    return {
+      players: playerBeliefs,
+      deductions: [],
+      strategy: 'Observe and gather information.',
+      relationships: { allies: [], enemies: [] },
+    };
+  }
+
+  private applyStateDiff(agent: AgentState, diff: AgentStateDiff | null, round: number, players: Player[]): void {
+    if (!diff) return;
+    
+    // Apply player belief updates
+    if (diff.playerBeliefs) {
+      Object.entries(diff.playerBeliefs).forEach(([id, entry]) => {
+        if (!agent.beliefs.players[id]) {
+          agent.beliefs.players[id] = {
+            suspicion: 0.5,
+            reason: 'New observation.',
+            suspectedRole: 'unknown',
+            lastUpdated: round,
+          };
+        }
+        if (typeof entry.suspicion === 'number') {
+          agent.beliefs.players[id].suspicion = entry.suspicion;
+        }
+        if (entry.suspectedRole) {
+          agent.beliefs.players[id].suspectedRole = entry.suspectedRole;
+        }
+        if (entry.reason) {
+          agent.beliefs.players[id].reason = entry.reason;
+        }
+        agent.beliefs.players[id].lastUpdated = round;
+      });
+    }
+    
+    // Merge deductions (cap at 5, summarize if overflow)
+    if (diff.beliefs?.deductions) {
+      const newDeductions = [...agent.beliefs.deductions, ...diff.beliefs.deductions];
+      if (newDeductions.length > 5) {
+        // Keep last 3, summarize oldest 2 into 1
+        const toSummarize = newDeductions.slice(0, newDeductions.length - 3);
+        const summary = `Previous insights: ${toSummarize.map(d => d.substring(0, 30)).join('; ')}`;
+        agent.beliefs.deductions = [summary, ...newDeductions.slice(-3)];
+      } else {
+        agent.beliefs.deductions = newDeductions;
+      }
+    }
+    
+    // Update strategy
+    if (diff.beliefs?.strategy) {
+      agent.beliefs.strategy = diff.beliefs.strategy;
+    }
+    
+    // Update relationships
+    if (diff.beliefs?.relationships) {
+      const resolveNames = (names: string[]) => names
+        .map(name => {
+          const p = players.find(pl => pl.name.toLowerCase() === name.toLowerCase());
+          return p?.id || name;
+        })
+        .filter(id => players.find(p => p.id === id));
+      
+      if (diff.beliefs.relationships.allies) {
+        agent.beliefs.relationships.allies = resolveNames(diff.beliefs.relationships.allies);
+      }
+      if (diff.beliefs.relationships.enemies) {
+        agent.beliefs.relationships.enemies = resolveNames(diff.beliefs.relationships.enemies);
+      }
+    }
+  }
+
+  private updateKnownRolesAfterElimination(eliminatedPlayer: Player): void {
+    this.agents.forEach(agent => {
+      agent.knownRoles[eliminatedPlayer.name] = eliminatedPlayer.role;
+      // Update belief entry with actual role
+      if (agent.beliefs.players[eliminatedPlayer.id]) {
+        agent.beliefs.players[eliminatedPlayer.id].suspectedRole = eliminatedPlayer.role;
+        agent.beliefs.players[eliminatedPlayer.id].reason = `Revealed as ${eliminatedPlayer.role} upon elimination.`;
+      }
+    });
+  }
+
+  private persistAgents(): void {
+    try {
+      const data = Array.from(this.agents.entries()).map(([id, agent]) => [id, agent]);
+      localStorage.setItem('ai-mafia-agent-states', JSON.stringify(data));
+    } catch {
+      // localStorage may be full
+    }
+  }
+
+  private loadAgents(): Map<string, AgentState> | null {
+    try {
+      const raw = localStorage.getItem('ai-mafia-agent-states');
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return null;
+      const map = new Map<string, AgentState>();
+      parsed.forEach(([id, agent]) => map.set(id, agent));
+      return map;
+    } catch {
+      return null;
+    }
   }
 
   initializeGame(humanMode?: HumanMode, humanRolePreference?: string): void {
@@ -65,6 +180,9 @@ export class GameEngine {
         name: player.name,
         role: player.role,
         personality: shuffledPersonalities.find((p) => p.name === player.personality)!,
+        beliefs: this.createInitialBeliefs(players),
+        knownRoles: {},
+        votingHistory: [],
         memory: [],
         suspicions: {},
         trust: {},
@@ -100,6 +218,9 @@ export class GameEngine {
         name: player.name,
         role: player.role,
         personality: personalities.find((p) => p.name === player.personality) || personalities[0],
+        beliefs: this.createInitialBeliefs(players),
+        knownRoles: {},
+        votingHistory: [],
         memory: [],
         suspicions: {},
         trust: {},
@@ -144,6 +265,7 @@ export class GameEngine {
       if (agent) {
         try {
           const nightAction = await this.agentRunner.getNightAction(agent, 'mafia_kill', state.events, state.players);
+          this.applyStateDiff(agent, nightAction.stateUpdates, state.round, state.players);
           // Validate: mafia cannot kill other mafia
           const target = state.players.find(p => p.id === nightAction.targetId);
           const nonMafiaTargets = state.players.filter(p => p.isAlive && p.role !== 'mafia');
@@ -166,6 +288,7 @@ export class GameEngine {
       if (agent) {
         try {
           const nightAction = await this.agentRunner.getNightAction(agent, 'detective_investigate', state.events, state.players);
+          this.applyStateDiff(agent, nightAction.stateUpdates, state.round, state.players);
           this.dispatch({ type: 'SUBMIT_NIGHT_ACTION', payload: nightAction });
         } catch (error) {
           console.error('Night action failed:', error);
@@ -181,6 +304,7 @@ export class GameEngine {
       if (agent) {
         try {
           const nightAction = await this.agentRunner.getNightAction(agent, 'doctor_protect', state.events, state.players);
+          this.applyStateDiff(agent, nightAction.stateUpdates, state.round, state.players);
           // Doctor cannot protect themselves
           if (nightAction.targetId === aliveDoctor.id) {
             const otherAlive = state.players.filter(p => p.isAlive && p.id !== aliveDoctor.id);
@@ -209,6 +333,31 @@ export class GameEngine {
         killedPlayerId: result.killedPlayerId,
       },
     });
+
+    // Update known roles for all agents after elimination
+    if (result.killedPlayerId) {
+      const killed = updatedState.players.find(p => p.id === result.killedPlayerId);
+      if (killed) {
+        this.updateKnownRolesAfterElimination(killed);
+      }
+    }
+
+    // Update detective known roles from investigation
+    result.events.forEach(event => {
+      if (event.type === 'investigation' && event.targetId) {
+        const target = updatedState.players.find(p => p.id === event.targetId);
+        const detective = this.agents.get(event.actorId);
+        if (target && detective) {
+          detective.knownRoles[target.name] = target.role;
+          if (detective.beliefs.players[target.id]) {
+            detective.beliefs.players[target.id].suspectedRole = target.role;
+            detective.beliefs.players[target.id].reason = 'Confirmed by investigation.';
+          }
+        }
+      }
+    });
+
+    this.persistAgents();
 
     // Move dead players to the same room as ghosts (no longer isolating to study)
     if (result.killedPlayerId) {
@@ -259,14 +408,17 @@ export class GameEngine {
         try {
           // Get AI speech
           const whisper = this.whispers.get(player.id);
-          const speech = await this.agentRunner.getSpeech(agent, state.round, state.events, state.players, whisper);
-
+          const result = await this.agentRunner.getSpeech(agent, state.round, state.events, state.players, whisper);
+          
+          // Apply state updates from LLM
+          this.applyStateDiff(agent, result.stateUpdates, state.round, state.players);
+          
           const event: GameEvent = {
             round: state.round,
             phase: 'day_discussion',
             type: 'speech',
             actorId: player.id,
-            content: speech,
+            content: result.speech,
             timestamp: Date.now(),
             isPublic: true,
           };
@@ -298,9 +450,6 @@ export class GameEngine {
       }
     }
 
-    // Update suspicions after discussion — sequential with delays to avoid 429
-    await this.updateAllSuspicions(state);
-
     // Start voting
     this.startVote();
   }
@@ -328,10 +477,14 @@ export class GameEngine {
         await this.delay(600 / state.speed);
       } else {
         try {
-          const voteResult = await this.agentRunner.getVote(agent, state.events, state.players);
+          const result = await this.agentRunner.getVote(agent, state.events, state.players);
+          
+          // Apply state updates from LLM
+          this.applyStateDiff(agent, result.stateUpdates, state.round, state.players);
+          
           // Validate: target must be a valid alive player (not self)
-          const target = state.players.find(p => p.id === voteResult.targetId && p.isAlive && p.id !== player.id);
-          let finalTargetId = voteResult.targetId;
+          const target = state.players.find(p => p.id === result.targetId && p.isAlive && p.id !== player.id);
+          let finalTargetId = result.targetId;
           if (!target) {
             // Fallback: random valid target
             const validTargets = state.players.filter(p => p.isAlive && p.id !== player.id);
@@ -339,6 +492,14 @@ export class GameEngine {
               finalTargetId = validTargets[Math.floor(Math.random() * validTargets.length)].id;
             }
           }
+          
+          // Record voting history
+          agent.votingHistory.push({
+            round: state.round,
+            targetId: finalTargetId,
+            reason: result.reasoning,
+          });
+          
           votes[player.id] = finalTargetId;
           this.dispatch({
             type: 'SUBMIT_VOTE',
@@ -376,6 +537,15 @@ export class GameEngine {
       },
     });
 
+    if (voteResult.eliminatedPlayerId) {
+      const eliminated = updatedState.players.find(p => p.id === voteResult.eliminatedPlayerId);
+      if (eliminated) {
+        this.updateKnownRolesAfterElimination(eliminated);
+      }
+    }
+
+    this.persistAgents();
+
     // Update agent memories
     voteResult.events.forEach((event) => {
       this.agents.forEach((agent) => {
@@ -411,27 +581,6 @@ export class GameEngine {
     }
 
     return false;
-  }
-
-  private async updateAllSuspicions(state: GameState): Promise<void> {
-    const aliveAgents = Array.from(this.agents.values())
-      .filter((agent) => state.players.find((p) => p.id === agent.id)?.isAlive);
-
-    for (const agent of aliveAgents) {
-      if (!this.isRunning) return;
-      const recentEvents = state.events.slice(-5);
-      try {
-        const newSuspicions = await this.agentRunner.updateSuspicions(
-          agent,
-          recentEvents,
-          state.players,
-        );
-        agent.suspicions = newSuspicions;
-      } catch (error) {
-        console.error('Failed to update suspicions:', error);
-      }
-      await this.delay(400);
-    }
   }
 
   private moveCharactersToRoom(roomId: string): void {
