@@ -1,5 +1,45 @@
 // src/engine/prompts.ts
-import type {  AgentState, GameEvent, Player  } from "../types/game";
+import type { AgentState, GameEvent, Player, AgentBeliefs, Role } from "../types/game";
+
+function formatBeliefs(beliefs: AgentBeliefs, players: Player[]): string {
+  const entries = Object.entries(beliefs.players)
+    .map(([id, entry]) => {
+      const player = players.find(p => p.id === id);
+      if (!player) return '';
+      return `  ${player.name}: suspicion ${(entry.suspicion * 100).toFixed(0)}%, suspected ${entry.suspectedRole}. Reason: "${entry.reason}"`;
+    })
+    .filter(Boolean)
+    .join('\n');
+
+  const deductions = beliefs.deductions.length > 0
+    ? `Your deductions:\n${beliefs.deductions.map((d, i) => `  ${i + 1}. ${d}`).join('\n')}`
+    : 'Your deductions: None yet.';
+
+  const strategy = beliefs.strategy
+    ? `Your current strategy: "${beliefs.strategy}"`
+    : 'Your current strategy: Observe and gather information.';
+
+  const relationships = [
+    beliefs.relationships.allies.length > 0 ? `  Allies: ${beliefs.relationships.allies.map(id => players.find(p => p.id === id)?.name).filter(Boolean).join(', ')}` : '',
+    beliefs.relationships.enemies.length > 0 ? `  Enemies: ${beliefs.relationships.enemies.map(id => players.find(p => p.id === id)?.name).filter(Boolean).join(', ')}` : '',
+  ].filter(Boolean).join('\n');
+
+  return `Your beliefs about players:\n${entries || '  No strong beliefs yet.'}\n\n${deductions}\n\n${strategy}${relationships ? '\n\nYour relationships:\n' + relationships : ''}`;
+}
+
+function formatKnownRoles(knownRoles: Record<string, Role>, players: Player[]): string {
+  const entries = Object.entries(knownRoles)
+    .map(([name, role]) => `  ${name}: ${role}`)
+    .join('\n');
+  return entries ? `Known roles (from eliminations/investigations):\n${entries}` : 'Known roles: None confirmed yet.';
+}
+
+function formatAlivePlayers(players: Player[], excludeId?: string): string {
+  return players
+    .filter(p => p.isAlive && p.id !== excludeId)
+    .map(p => p.name)
+    .join(', ');
+}
 
 export function buildDiscussionPrompt(
   agent: AgentState,
@@ -8,30 +48,56 @@ export function buildDiscussionPrompt(
   players: Player[],
   whisper?: string,
 ): string {
-  const recentEvents = getRecentEvents(events);
-  const suspicionText = Object.entries(agent.suspicions)
-    .map(([id, score]) => {
-      const player = players.find((p) => p.id === id);
-      return player ? `${player.name}: ${(score * 100).toFixed(0)}%` : '';
+  const beliefsText = formatBeliefs(agent.beliefs, players);
+  const knownRolesText = formatKnownRoles(agent.knownRoles, players);
+  const alivePlayers = formatAlivePlayers(players, agent.id);
+  
+  // Get today's speeches only
+  const todaySpeeches = events
+    .filter(e => e.round === round && e.phase === 'day_discussion' && e.type === 'speech')
+    .map(e => {
+      const speaker = players.find(p => p.id === e.actorId);
+      return `  ${speaker?.name}: "${e.content}"`;
     })
-    .filter(Boolean)
     .join('\n');
 
-  let prompt = `You are ${agent.name}, a ${agent.role} in a game of Mafia.
-Your personality: ${agent.personality.description}
-Your private suspicions:
-${suspicionText || 'No strong suspicions yet.'}
+  const recentEvents = getRecentEvents(events);
 
-Game history so far:
+  let prompt = `You are ${agent.name}, a ${agent.role} in Mafia.
+Personality: ${agent.personality.description}
+
+${beliefsText}
+
+${knownRolesText}
+
+Alive players: ${alivePlayers}
+
+Today's discussion so far:
+${todaySpeeches || '  (No one has spoken yet this round)'}
+
+Recent game history:
 ${recentEvents}
 
-It is Day ${round} discussion phase.
-Speak naturally in 1–3 sentences. Express suspicion, defend yourself, or redirect.
-Do NOT reveal your role directly.
-Stay in character. Be specific — reference actual in-game events.`;
+It is Day ${round}. Speak in 1-2 sentences. Stay in character. Reference specific players/events.
+
+Respond with JSON:
+{
+  "speech": "Your dialogue here",
+  "state_updates": {
+    "players": {
+      "player_name": { "suspicion": 0.0-1.0, "suspectedRole": "mafia|civilian|unknown", "reason": "Why" }
+    },
+    "deductions": ["New tactical insight (optional, max 5 total)"],
+    "strategy": "Your updated strategy (optional)",
+    "relationships": {
+      "allies": ["player_name"],
+      "enemies": ["player_name"]
+    }
+  }
+}`;
 
   if (whisper) {
-    prompt += `\n\nA mysterious voice whispers to you: "${whisper}"\nConsider this carefully in your response.`;
+    prompt += `\n\nA mysterious voice whispers: "${whisper}"\nConsider this in your response.`;
   }
 
   return prompt;
@@ -43,42 +109,92 @@ export function buildNightActionPrompt(
   events: GameEvent[],
   players: Player[],
 ): string {
+  const beliefsText = formatBeliefs(agent.beliefs, players);
+  const knownRolesText = formatKnownRoles(agent.knownRoles, players);
   const recentEvents = getRecentEvents(events);
-  const alivePlayers = players.filter((p) => p.isAlive && p.id !== agent.id);
-  const aliveNames = alivePlayers.map((p) => p.name).join(', ');
-
+  
   if (action === 'mafia_kill') {
-    const mafiaAlly = players.find(
-      (p) => p.role === 'mafia' && p.id !== agent.id && p.isAlive,
-    );
+    const mafiaAlly = players.find(p => p.role === 'mafia' && p.id !== agent.id && p.isAlive);
     const nonMafiaTargets = players.filter(p => p.isAlive && p.role !== 'mafia' && p.id !== agent.id);
-    const targetNames = nonMafiaTargets.map((p) => p.name).join(', ');
-    return `You are ${agent.name}, a Mafia member. Your fellow Mafia: ${mafiaAlly?.name || 'none'}.
-Alive non-Mafia targets: ${targetNames}
-Game state:
+    const targetNames = nonMafiaTargets.map(p => p.name).join(', ');
+    
+    return `You are ${agent.name}, Mafia. Fellow Mafia: ${mafiaAlly?.name || 'none'}.
+
+${beliefsText}
+
+${knownRolesText}
+
+Non-Mafia targets: ${targetNames}
+
+Game history:
 ${recentEvents}
 
-Choose ONE player to eliminate tonight. You CANNOT target fellow Mafia members.
-Respond with ONLY a JSON object: {"target": "player_name", "reasoning": "..."}`;
+Choose ONE to eliminate. Cannot target fellow Mafia.
+
+Respond with JSON:
+{
+  "target": "player_name",
+  "reasoning": "Why",
+  "state_updates": {
+    "players": {
+      "player_name": { "suspicion": 0.0-1.0, "suspectedRole": "mafia|civilian|unknown", "reason": "Why" }
+    }
+  }
+}`;
   }
 
   if (action === 'detective_investigate') {
-    return `You are ${agent.name}, the Detective.
+    const aliveNames = players.filter(p => p.isAlive && p.id !== agent.id).map(p => p.name).join(', ');
+    return `You are ${agent.name}, Detective.
+
+${beliefsText}
+
+${knownRolesText}
+
 Alive players: ${aliveNames}
-Game state:
+
+Game history:
 ${recentEvents}
 
-Choose ONE player to investigate tonight. You will learn their true role.
-Respond with ONLY a JSON object: {"target": "player_name", "reasoning": "..."}`;
+Choose ONE to investigate.
+
+Respond with JSON:
+{
+  "target": "player_name",
+  "reasoning": "Why",
+  "state_updates": {
+    "players": {
+      "player_name": { "suspicion": 0.0-1.0, "suspectedRole": "mafia|civilian|unknown", "reason": "Why" }
+    }
+  }
+}`;
   }
 
-  return `You are ${agent.name}, the Doctor.
+  // doctor_protect
+  const aliveNames = players.filter(p => p.isAlive && p.id !== agent.id).map(p => p.name).join(', ');
+  return `You are ${agent.name}, Doctor.
+
+${beliefsText}
+
+${knownRolesText}
+
 Alive players: ${aliveNames}
-Game state:
+
+Game history:
 ${recentEvents}
 
-Choose ONE player to protect tonight. You CANNOT protect yourself. If the Mafia targets them, they will survive.
-Respond with ONLY a JSON object: {"target": "player_name", "reasoning": "..."}`;
+Choose ONE to protect. Cannot protect yourself.
+
+Respond with JSON:
+{
+  "target": "player_name",
+  "reasoning": "Why",
+  "state_updates": {
+    "players": {
+      "player_name": { "suspicion": 0.0-1.0, "suspectedRole": "mafia|civilian|unknown", "reason": "Why" }
+    }
+  }
+}`;
 }
 
 export function buildVotePrompt(
@@ -86,41 +202,47 @@ export function buildVotePrompt(
   events: GameEvent[],
   players: Player[],
 ): string {
+  const beliefsText = formatBeliefs(agent.beliefs, players);
+  const knownRolesText = formatKnownRoles(agent.knownRoles, players);
+  const aliveOthers = formatAlivePlayers(players, agent.id);
+  
+  const todaySpeeches = events
+    .filter(e => e.phase === 'day_discussion' && e.type === 'speech')
+    .map(e => {
+      const speaker = players.find(p => p.id === e.actorId);
+      return `  ${speaker?.name}: "${e.content}"`;
+    })
+    .join('\n');
+
   const recentEvents = getRecentEvents(events);
-  const todayEvents = events.filter(
-    (e) => e.phase === 'day_discussion' && e.type === 'speech',
-  );
-  const suspicionText = Object.entries(agent.suspicions)
-    .map(([id, score]) => {
-      const player = players.find((p) => p.id === id);
-      return player ? `${player.name}: ${(score * 100).toFixed(0)}%` : '';
-    })
-    .filter(Boolean)
-    .join('\n');
 
-  const speechesText = todayEvents
-    .map((e) => {
-      const speaker = players.find((p) => p.id === e.actorId);
-      return `${speaker?.name || 'Unknown'}: "${e.content}"`;
-    })
-    .join('\n');
+  return `You are ${agent.name}. Time to vote.
 
-  const aliveOthers = players.filter(p => p.isAlive && p.id !== agent.id).map(p => p.name).join(', ');
+${beliefsText}
 
-  return `You are ${agent.name}. Based on everything said today, vote to eliminate one player.
-Your suspicion scores:
-${suspicionText || 'No strong suspicions yet.'}
+${knownRolesText}
 
-Recent statements:
-${speechesText || 'No statements today.'}
+Today's discussion:
+${todaySpeeches || 'No discussion today.'}
 
-Game state:
+Game history:
 ${recentEvents}
 
 Alive players you can vote for: ${aliveOthers}
 
-If you have no strong suspicion, you may abstain by voting "abstain".
-Respond with ONLY: {"vote": "player_name"} or {"vote": "abstain"}`;
+Vote to eliminate one player, or abstain.
+
+Respond with JSON:
+{
+  "vote": "player_name" or "abstain",
+  "confidence": 0.0-1.0,
+  "reasoning": "Why you're voting this way",
+  "state_updates": {
+    "players": {
+      "player_name": { "suspicion": 0.0-1.0, "suspectedRole": "mafia|civilian|unknown", "reason": "Why" }
+    }
+  }
+}`;
 }
 
 function getRecentEvents(events: GameEvent[]): string {
