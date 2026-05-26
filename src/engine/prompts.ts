@@ -81,21 +81,7 @@ ${recentEvents}
 
 It is Day ${round}. Speak in 1-2 sentences. Stay in character. Reference specific players/events.
 
-Respond with JSON:
-{
-  "speech": "Your dialogue here",
-  "state_updates": {
-    "players": {
-      "player_name": { "suspicion": 0.0-1.0, "suspectedRole": "mafia|civilian|unknown", "reason": "Why" }
-    },
-    "deductions": ["New tactical insight (optional, max 5 total)"],
-    "strategy": "Your updated strategy (optional)",
-    "relationships": {
-      "allies": ["player_name"],
-      "enemies": ["player_name"]
-    }
-  }
-}`;
+Respond with JSON: {"speech": "Your dialogue here"}`;
 
   if (whisper) {
     prompt += `\n\nA mysterious voice whispers: "${whisper}"\nConsider this in your response.`;
@@ -133,16 +119,7 @@ ${recentEvents}
 
 Choose ONE to eliminate. Cannot target fellow Mafia.
 
-Respond with JSON:
-{
-  "target": "player_name",
-  "reasoning": "Why",
-  "state_updates": {
-    "players": {
-      "player_name": { "suspicion": 0.0-1.0, "suspectedRole": "mafia|civilian|unknown", "reason": "Why" }
-    }
-  }
-}`;
+Respond with JSON: {"target": "player_name", "reasoning": "Why"}`;
   }
 
   if (action === 'detective_investigate') {
@@ -160,16 +137,7 @@ ${recentEvents}
 
 Choose ONE to investigate.
 
-Respond with JSON:
-{
-  "target": "player_name",
-  "reasoning": "Why",
-  "state_updates": {
-    "players": {
-      "player_name": { "suspicion": 0.0-1.0, "suspectedRole": "mafia|civilian|unknown", "reason": "Why" }
-    }
-  }
-}`;
+Respond with JSON: {"target": "player_name", "reasoning": "Why"}`;
   }
 
   // doctor_protect
@@ -187,16 +155,7 @@ ${recentEvents}
 
 Choose ONE to protect. Cannot protect yourself.
 
-Respond with JSON:
-{
-  "target": "player_name",
-  "reasoning": "Why",
-  "state_updates": {
-    "players": {
-      "player_name": { "suspicion": 0.0-1.0, "suspectedRole": "mafia|civilian|unknown", "reason": "Why" }
-    }
-  }
-}`;
+Respond with JSON: {"target": "player_name", "reasoning": "Why"}`;
 }
 
 export function buildVotePrompt(

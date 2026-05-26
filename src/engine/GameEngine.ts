@@ -252,7 +252,6 @@ export class GameEngine {
       if (agent) {
         try {
           const nightAction = await this.agentRunner.getNightAction(agent, 'mafia_kill', state.events, state.players);
-          this.applyStateDiff(agent, nightAction.stateUpdates, state.round, state.players);
           // Validate: mafia cannot kill other mafia
           const target = state.players.find(p => p.id === nightAction.targetId);
           const nonMafiaTargets = state.players.filter(p => p.isAlive && p.role !== 'mafia');
@@ -275,7 +274,6 @@ export class GameEngine {
       if (agent) {
         try {
           const nightAction = await this.agentRunner.getNightAction(agent, 'detective_investigate', state.events, state.players);
-          this.applyStateDiff(agent, nightAction.stateUpdates, state.round, state.players);
           this.dispatch({ type: 'SUBMIT_NIGHT_ACTION', payload: nightAction });
         } catch (error) {
           console.error('Night action failed:', error);
@@ -291,7 +289,6 @@ export class GameEngine {
       if (agent) {
         try {
           const nightAction = await this.agentRunner.getNightAction(agent, 'doctor_protect', state.events, state.players);
-          this.applyStateDiff(agent, nightAction.stateUpdates, state.round, state.players);
           // Doctor cannot protect themselves
           if (nightAction.targetId === aliveDoctor.id) {
             const otherAlive = state.players.filter(p => p.isAlive && p.id !== aliveDoctor.id);
@@ -396,17 +393,14 @@ export class GameEngine {
         try {
           // Get AI speech
           const whisper = this.whispers.get(player.id);
-          const result = await this.agentRunner.getSpeech(agent, state.round, state.events, state.players, whisper);
-          
-          // Apply state updates from LLM
-          this.applyStateDiff(agent, result.stateUpdates, state.round, state.players);
+          const speech = await this.agentRunner.getSpeech(agent, state.round, state.events, state.players, whisper);
           
           const event: GameEvent = {
             round: state.round,
             phase: 'day_discussion',
             type: 'speech',
             actorId: player.id,
-            content: result.speech,
+            content: speech,
             timestamp: Date.now(),
             isPublic: true,
           };
@@ -453,62 +447,64 @@ export class GameEngine {
     const alivePlayers = state.players.filter((p) => p.isAlive);
     const votes: Record<string, string> = {};
 
-    // Collect votes SEQUENTIALLY to avoid rate limits, with visual indicator updating as we go
-    for (const player of alivePlayers) {
-      if (!this.isRunning) return;
-
+    // Collect AI votes in parallel for speed
+    const aiPlayers = alivePlayers.filter(p => !p.isHuman || !state.humanInControl);
+    const votePromises = aiPlayers.map(async (player) => {
       const agent = this.agents.get(player.id);
-      if (!agent) continue;
+      if (!agent) return null;
 
-      if (player.isHuman && state.humanInControl) {
-        // Human votes - handled by UI
-        await this.delay(600 / state.speed);
-      } else {
-        try {
-          const result = await this.agentRunner.getVote(agent, state.events, state.players);
-          
-          // Apply state updates from LLM
-          this.applyStateDiff(agent, result.stateUpdates, state.round, state.players);
-          
-          // Validate: target must be a valid alive player (not self)
-          const target = state.players.find(p => p.id === result.targetId && p.isAlive && p.id !== player.id);
-          let finalTargetId = result.targetId;
-          if (!target) {
-            // Fallback: random valid target
-            const validTargets = state.players.filter(p => p.isAlive && p.id !== player.id);
-            if (validTargets.length > 0) {
-              finalTargetId = validTargets[Math.floor(Math.random() * validTargets.length)].id;
-            }
-          }
-          
-          // Record voting history
-          agent.votingHistory.push({
-            round: state.round,
-            targetId: finalTargetId,
-            reason: result.reasoning,
-          });
-          
-          votes[player.id] = finalTargetId;
-          this.dispatch({
-            type: 'SUBMIT_VOTE',
-            payload: { voterId: player.id, targetId: finalTargetId },
-          });
-        } catch (error) {
-          console.error(`Vote failed for ${player.name}:`, error);
-          // Fallback: random vote
-          const targets = state.players.filter(p => p.isAlive && p.id !== player.id);
-          const randomTarget = targets[Math.floor(Math.random() * targets.length)];
-          if (randomTarget) {
-            votes[player.id] = randomTarget.id;
-            this.dispatch({
-              type: 'SUBMIT_VOTE',
-              payload: { voterId: player.id, targetId: randomTarget.id },
-            });
-          }
+      try {
+        const result = await this.agentRunner.getVote(agent, state.events, state.players);
+        return { playerId: player.id, agent, result };
+      } catch (error) {
+        console.error(`Vote failed for ${player.name}:`, error);
+        const targets = state.players.filter(p => p.isAlive && p.id !== player.id);
+        const randomTarget = targets[Math.floor(Math.random() * targets.length)];
+        if (randomTarget) {
+          return {
+            playerId: player.id,
+            agent,
+            result: { targetId: randomTarget.id, confidence: 0.3, reasoning: 'Random fallback.', stateUpdates: null },
+          };
         }
-        await this.delay(500 / state.speed);
+        return null;
       }
-    }
+    });
+
+    // Wait for all AI votes to complete
+    const voteResults = await Promise.all(votePromises);
+
+    // Process all results
+    voteResults.forEach(vr => {
+      if (!vr) return;
+      const { playerId, agent, result } = vr;
+
+      // Apply state updates from LLM (once per round)
+      this.applyStateDiff(agent, result.stateUpdates, state.round, state.players);
+
+      // Validate: target must be a valid alive player (not self)
+      const target = state.players.find(p => p.id === result.targetId && p.isAlive && p.id !== playerId);
+      let finalTargetId = result.targetId;
+      if (!target) {
+        const validTargets = state.players.filter(p => p.isAlive && p.id !== playerId);
+        if (validTargets.length > 0) {
+          finalTargetId = validTargets[Math.floor(Math.random() * validTargets.length)].id;
+        }
+      }
+
+      // Record voting history
+      agent.votingHistory.push({
+        round: state.round,
+        targetId: finalTargetId,
+        reason: result.reasoning,
+      });
+
+      votes[playerId] = finalTargetId;
+      this.dispatch({
+        type: 'SUBMIT_VOTE',
+        payload: { voterId: playerId, targetId: finalTargetId },
+      });
+    });
 
     // Re-read state to include human votes
     const updatedState = this.getState();

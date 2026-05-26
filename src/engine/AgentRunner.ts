@@ -127,19 +127,16 @@ export class AgentRunner {
     events: GameEvent[],
     players: Player[],
     whisper?: string,
-  ): Promise<{ speech: string; stateUpdates: AgentStateDiff | null }> {
+  ): Promise<string> {
     const prompt = buildDiscussionPrompt(agent, round, events, players, whisper);
-    const response = await this.callLLMWithRetry(prompt, 250);
+    const response = await this.callLLMWithRetry(prompt, 150);
 
     try {
       const parsed = JSON.parse(response.replace(/^[^{]*/, '').replace(/[^}]*$/, ''));
-      const speech = parsed.speech || "I'm thinking...";
-      const stateUpdates = parseStateUpdates(response, players);
-      return { speech, stateUpdates };
+      return parsed.speech || "I'm thinking...";
     } catch {
-      // Fallback: extract first sentence as speech, no state update
-      const fallbackSpeech = response.split('.')[0]?.trim() || "I'm not sure what to think.";
-      return { speech: fallbackSpeech, stateUpdates: null };
+      // Fallback: extract first sentence as speech
+      return response.split('.')[0]?.trim() || "I'm not sure what to think.";
     }
   }
 
@@ -148,7 +145,7 @@ export class AgentRunner {
     action: 'mafia_kill' | 'detective_investigate' | 'doctor_protect',
     events: GameEvent[],
     players: Player[],
-  ): Promise<NightAction & { stateUpdates: AgentStateDiff | null }> {
+  ): Promise<NightAction> {
     const prompt = buildNightActionPrompt(agent, action, events, players);
     const response = await this.callLLMWithRetry(prompt, 150);
 
@@ -169,7 +166,6 @@ export class AgentRunner {
         action,
         targetId: targetPlayer?.id || players.filter((p) => p.isAlive && p.id !== agent.id)[0]?.id || '',
         reasoning: parsed.reasoning || '',
-        stateUpdates: parseStateUpdates(response, players),
       };
     } catch {
       const aliveOthers = players.filter((p) => p.isAlive && p.id !== agent.id);
@@ -178,7 +174,6 @@ export class AgentRunner {
         action,
         targetId: aliveOthers[Math.floor(Math.random() * aliveOthers.length)]?.id || '',
         reasoning: 'Random fallback.',
-        stateUpdates: null,
       };
     }
   }
