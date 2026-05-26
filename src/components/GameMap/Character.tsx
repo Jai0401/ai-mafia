@@ -70,7 +70,7 @@ export default function Character({ player, isRevealed, isSpeaking, isThinking, 
 
   return (
     <motion.div
-      className="absolute cursor-pointer z-30"
+      className={`absolute cursor-pointer ${isDead ? 'z-10' : 'z-30'}`}
       style={{
         left: `${player.position.x}%`,
         top: `${player.position.y}%`,
@@ -87,8 +87,21 @@ export default function Character({ player, isRevealed, isSpeaking, isThinking, 
       onClick={onClick}
     >
       <div className="flex flex-col items-center relative">
+        {/* Ghost effect for dead players */}
+        {isDead && (
+          <motion.div
+            animate={{ opacity: [0.3, 0.6, 0.3] }}
+            transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
+            className="absolute -inset-4 rounded-full blur-xl"
+            style={{
+              background: `radial-gradient(circle, ${player.color}30 0%, transparent 70%)`,
+              zIndex: -1,
+            }}
+          />
+        )}
+
         {/* Speech bubble above character */}
-        {isSpeaking && (
+        {isSpeaking && !isDead && (
           <motion.div
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -101,7 +114,7 @@ export default function Character({ player, isRevealed, isSpeaking, isThinking, 
         )}
 
         {/* Thinking indicator */}
-        {isThinking && (
+        {isThinking && !isDead && (
           <motion.div
             initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
@@ -129,12 +142,12 @@ export default function Character({ player, isRevealed, isSpeaking, isThinking, 
         <div
           className="relative"
           style={{
-            opacity: isDead ? 0.5 : 1,
-            filter: isDead ? 'grayscale(100%)' : 'none',
+            opacity: isDead ? 0.35 : 1,
+            filter: isDead ? 'grayscale(80%) blur(0.3px)' : 'none',
           }}
         >
           {/* Mafia glow */}
-          {(isRevealed && isMafia) && (
+          {(isRevealed && isMafia && !isDead) && (
             <div
               className="absolute inset-0 rounded-full blur-xl"
               style={{
@@ -146,7 +159,7 @@ export default function Character({ player, isRevealed, isSpeaking, isThinking, 
           )}
 
           {/* Speaking glow */}
-          {isSpeaking && (
+          {isSpeaking && !isDead && (
             <motion.div
               animate={{ opacity: [0.3, 0.6, 0.3] }}
               transition={{ repeat: Infinity, duration: 1.5 }}
@@ -164,19 +177,19 @@ export default function Character({ player, isRevealed, isSpeaking, isThinking, 
             <ellipse cx="32" cy="68" rx="20" ry="4" fill="rgba(0,0,0,0.3)" />
             
             {/* Backpack */}
-            <rect x="8" y="24" width="10" height="28" rx="4" fill={player.color} opacity="0.9" />
+            <rect x="8" y="24" width="10" height="28" rx="4" fill={player.color} opacity={isDead ? 0.5 : 0.9} />
             
             {/* Body (bean shape) */}
-            <rect x="16" y="16" width="32" height="44" rx="16" fill={player.color} />
+            <rect x="16" y="16" width="32" height="44" rx="16" fill={player.color} opacity={isDead ? 0.5 : 1} />
             
             {/* Visor */}
-            <rect x="24" y="22" width="22" height="14" rx="7" fill="#1a1a2e" />
-            <rect x="26" y="24" width="18" height="10" rx="5" fill="#16213e" />
-            <ellipse cx="40" cy="28" rx="3" ry="2" fill="rgba(255,255,255,0.4)" />
+            <rect x="24" y="22" width="22" height="14" rx="7" fill={isDead ? '#0a0a14' : '#1a1a2e'} />
+            <rect x="26" y="24" width="18" height="10" rx="5" fill={isDead ? '#070712' : '#16213e'} />
+            <ellipse cx="40" cy="28" rx="3" ry="2" fill={isDead ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.4)'} />
             
             {/* Legs */}
-            <rect x="22" y="54" width="10" height="12" rx="4" fill={player.color} />
-            <rect x="34" y="54" width="10" height="12" rx="4" fill={player.color} />
+            <rect x="22" y="54" width="10" height="12" rx="4" fill={player.color} opacity={isDead ? 0.5 : 1} />
+            <rect x="34" y="54" width="10" height="12" rx="4" fill={player.color} opacity={isDead ? 0.5 : 1} />
             
             {/* Hat */}
             {getHatSVG(player.hat, player.color)}
@@ -190,7 +203,7 @@ export default function Character({ player, isRevealed, isSpeaking, isThinking, 
             color: player.color,
             textShadow: `0 0 6px ${player.color}80`,
             textDecoration: isDead ? 'line-through' : 'none',
-            opacity: isDead ? 0.6 : 1,
+            opacity: isDead ? 0.4 : 1,
           }}
         >
           {player.name}

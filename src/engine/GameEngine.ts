@@ -210,10 +210,9 @@ export class GameEngine {
       },
     });
 
-    // Move dead players to study room (morgue)
-    // Use next available position; state may not be updated yet so we count existing dead
+    // Move dead players to the same room as ghosts (no longer isolating to study)
     if (result.killedPlayerId) {
-      this.movePlayerToRoom(result.killedPlayerId, 'study');
+      // No special movement needed — moveCharactersToRoom handles all players together
     }
 
     // Update agent memories
@@ -376,11 +375,6 @@ export class GameEngine {
       },
     });
 
-    // Move eliminated player to study room (morgue)
-    if (voteResult.eliminatedPlayerId) {
-      this.movePlayerToRoom(voteResult.eliminatedPlayerId, 'study');
-    }
-
     // Update agent memories
     voteResult.events.forEach((event) => {
       this.agents.forEach((agent) => {
@@ -443,11 +437,10 @@ export class GameEngine {
     const positions = roomPositions[roomId] || roomPositions['dining'];
     const state = this.getState();
 
+    // Move ALL players (alive and dead) to the new room.
+    // Dead players appear as translucent ghosts in the same space.
     let positionIndex = 0;
     state.players.forEach((player) => {
-      // Dead players stay permanently in the study room (morgue)
-      if (!player.isAlive) return;
-      
       const pos = positions[positionIndex % positions.length];
       positionIndex++;
       this.dispatch({
@@ -457,30 +450,6 @@ export class GameEngine {
           targetPosition: pos,
         },
       });
-    });
-  }
-
-  private movePlayerToRoom(playerId: string, roomId: string): void {
-    const positions = roomPositions[roomId] || roomPositions['dining'];
-    const state = this.getState();
-    // Count currently dead players to find next morgue slot.
-    // If state hasn't updated yet (React async dispatch), the new corpse won't
-    // be counted, so deadPlayers.length gives us the next free index.
-    const deadPlayers = state.players.filter(p => !p.isAlive);
-    const slotIndex = Math.min(deadPlayers.length, positions.length - 1);
-    const pos = positions[slotIndex];
-
-    if (!pos) {
-      console.warn(`No position available in ${roomId} for ${playerId}`);
-      return;
-    }
-
-    this.dispatch({
-      type: 'SET_TARGET_POSITION',
-      payload: {
-        playerId,
-        targetPosition: pos,
-      },
     });
   }
 

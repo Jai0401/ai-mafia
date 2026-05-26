@@ -1,103 +1,73 @@
 // src/data/roomLayout.ts
 import type { RoomLayout } from '../types/game';
 
+export interface RoomScene {
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
+  // Full-screen atmospheric colors
+  bgGradient: string;
+  ambientColor: string;
+  floorColor: string;
+  // Props / furniture silhouettes rendered as SVG
+  props: React.ReactNode;
+}
+
 export const rooms: RoomLayout[] = [
   {
     id: 'library',
-    name: 'Library',
-    x: 0,
-    y: 0,
-    width: 50,
-    height: 50,
+    name: 'The Library',
+    x: 0, y: 0, width: 100, height: 100,
     color: '#4a90d9',
     icon: '📚',
-    description: 'Night chat zone',
+    description: 'Night falls. The Mafia stirs.',
   },
   {
     id: 'dining',
-    name: 'Dining Room',
-    x: 50,
-    y: 0,
-    width: 50,
-    height: 50,
+    name: 'The Dining Hall',
+    x: 0, y: 0, width: 100, height: 100,
     color: '#e8a84c',
     icon: '🍽️',
-    description: 'Day discussion zone',
-  },
-  {
-    id: 'study',
-    name: 'Study',
-    x: 0,
-    y: 50,
-    width: 50,
-    height: 50,
-    color: '#4a90d9',
-    icon: '🔍',
-    description: 'Detective den',
+    description: 'Day breaks. Accusations fly.',
   },
   {
     id: 'parlour',
-    name: 'Parlour',
-    x: 50,
-    y: 50,
-    width: 50,
-    height: 50,
+    name: 'The Parlour',
+    x: 0, y: 0, width: 100, height: 100,
     color: '#c0392b',
     icon: '🗳️',
-    description: 'Voting booth',
+    description: 'The town votes. Justice or murder?',
   },
 ];
 
-// Positions for characters in each room (percentage-based) - 10 spots to support up to 10 players
+// Character positions within a full-screen room (percentage of room container)
+// Arranged to look like they're gathered in a space, not a rigid grid
 export const roomPositions: Record<string, { x: number; y: number }[]> = {
   library: [
-    { x: 8, y: 15 },
-    { x: 25, y: 12 },
-    { x: 42, y: 15 },
-    { x: 12, y: 32 },
-    { x: 32, y: 30 },
-    { x: 45, y: 35 },
-    { x: 15, y: 48 },
-    { x: 35, y: 45 },
-    { x: 8, y: 42 },
-    { x: 42, y: 48 },
+    { x: 15, y: 30 },  { x: 30, y: 25 },  { x: 45, y: 28 },
+    { x: 60, y: 26 },  { x: 75, y: 30 },  { x: 20, y: 55 },
+    { x: 40, y: 50 },  { x: 55, y: 52 },  { x: 70, y: 55 },
+    { x: 85, y: 48 },
   ],
   dining: [
-    { x: 58, y: 15 },
-    { x: 75, y: 12 },
-    { x: 92, y: 15 },
-    { x: 62, y: 32 },
-    { x: 82, y: 30 },
-    { x: 95, y: 35 },
-    { x: 65, y: 48 },
-    { x: 85, y: 45 },
-    { x: 58, y: 42 },
-    { x: 92, y: 48 },
-  ],
-  study: [
-    { x: 8, y: 65 },
-    { x: 25, y: 62 },
-    { x: 42, y: 65 },
-    { x: 12, y: 82 },
-    { x: 32, y: 80 },
-    { x: 45, y: 85 },
-    { x: 15, y: 95 },
-    { x: 35, y: 92 },
-    { x: 8, y: 90 },
-    { x: 42, y: 95 },
+    { x: 18, y: 35 },  { x: 35, y: 32 },  { x: 50, y: 30 },
+    { x: 65, y: 33 },  { x: 82, y: 36 },  { x: 25, y: 58 },
+    { x: 42, y: 55 },  { x: 58, y: 56 },  { x: 72, y: 58 },
+    { x: 88, y: 54 },
   ],
   parlour: [
-    { x: 58, y: 65 },
-    { x: 75, y: 62 },
-    { x: 92, y: 65 },
-    { x: 62, y: 82 },
-    { x: 82, y: 80 },
-    { x: 95, y: 85 },
-    { x: 65, y: 95 },
-    { x: 85, y: 92 },
-    { x: 58, y: 90 },
-    { x: 92, y: 95 },
+    { x: 12, y: 38 },  { x: 28, y: 35 },  { x: 44, y: 33 },
+    { x: 56, y: 35 },  { x: 72, y: 38 },  { x: 88, y: 40 },
+    { x: 20, y: 62 },  { x: 38, y: 60 },  { x: 62, y: 60 },
+    { x: 80, y: 63 },
   ],
 };
 
-export const hallwayPosition = { x: 50, y: 110 };
+// Phase → active room mapping
+export const phaseToRoom: Record<string, string> = {
+  night: 'library',
+  day_discussion: 'dining',
+  day_vote: 'parlour',
+  game_over: 'parlour',
+};

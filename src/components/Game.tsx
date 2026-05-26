@@ -10,8 +10,9 @@ import GameLog from './UI/GameLog';
 import VoteModal from './UI/VoteModal';
 import Room from './GameMap/Room';
 import Character from './GameMap/Character';
-import { AnimatePresence, motion } from 'framer-motion';
-import { rooms } from '../data/roomLayout';
+import CurtainTransition from './GameMap/CurtainTransition';
+import { motion } from 'framer-motion';
+import { rooms, phaseToRoom } from '../data/roomLayout';
 
 interface Props {
   apiKey: string;
@@ -30,9 +31,28 @@ export default function Game({ apiKey, preConfiguredPlayers }: Props) {
   const [speechText, setSpeechText] = useState('');
   const [activeSpeech, setActiveSpeech] = useState<{playerId: string; text: string} | null>(null);
 
+  // Curtain transition state
+  const [showCurtain, setShowCurtain] = useState(false);
+  const prevPhaseRef = useRef(state.phase);
+
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
+
+  // Detect phase changes and trigger curtain transition
+  useEffect(() => {
+    const prev = prevPhaseRef.current;
+    const curr = state.phase;
+
+    // Skip curtain on initial load (lobby -> night) and game_over
+    if (prev !== curr && prev !== 'lobby' && curr !== 'game_over' && curr !== 'lobby') {
+      setShowCurtain(true);
+      const timer = setTimeout(() => setShowCurtain(false), 1800);
+      return () => clearTimeout(timer);
+    }
+
+    prevPhaseRef.current = curr;
+  }, [state.phase]);
 
   useEffect(() => {
     if (!engineRef.current) {
@@ -59,7 +79,6 @@ export default function Game({ apiKey, preConfiguredPlayers }: Props) {
       const timer = setTimeout(() => setActiveSpeech(null), 6000);
       return () => clearTimeout(timer);
     } else if (['elimination', 'investigation', 'protection', 'system'].includes(lastEvent.type)) {
-      // Speak system announcements with narrator voice
       speakNarratorText(lastEvent.content);
     }
   }, [state.events]);
@@ -82,8 +101,8 @@ export default function Game({ apiKey, preConfiguredPlayers }: Props) {
   const speakNarratorText = useCallback((text: string) => {
     if (!window.speechSynthesis) return;
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.75; // Slower, more dramatic
-    utterance.pitch = 0.5; // Deep narrator voice
+    utterance.rate = 0.75;
+    utterance.pitch = 0.5;
     utterance.volume = 0.8;
     const voices = window.speechSynthesis.getVoices();
     const deepVoice = voices.find(v => v.lang.startsWith('en'));
@@ -138,116 +157,120 @@ export default function Game({ apiKey, preConfiguredPlayers }: Props) {
     }
   };
 
+  const activeRoomId = phaseToRoom[state.phase] || 'dining';
+  const activeRoom = rooms.find(r => r.id === activeRoomId) || rooms[0];
   const isNight = state.phase === 'night';
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-screen flex flex-col bg-bg-deep">
       <PhaseBar phase={state.phase} round={state.round} speed={state.speed} isPaused={state.isPaused} onSpeedChange={handleSpeedChange} onPauseToggle={handlePauseToggle} />
 
       <div className="flex-1 flex overflow-hidden">
         <PlayerList players={state.players} revealAllRoles={state.revealAllRoles} humanPlayerId={state.humanPlayerId} humanMode={state.humanMode} onWhisper={(id) => { setWhisperTarget(id); setShowWhisperInput(true); }} />
 
-        <div className="flex-1 relative p-4">
-          <AnimatePresence>
+        <div className="flex-1 relative">
+          {/* Single active room — full screen */}
+          <Room room={activeRoom} isLit={!isNight}>
+            {/* Night actions indicator */}
             {isNight && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 1.5 }} className="absolute inset-0 bg-blue-950/20 z-10 pointer-events-none" />
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 bg-bg-room/90 border border-accent-amber/30 rounded-lg px-6 py-3 text-center">
+                <h3 className="font-display text-accent-amber text-sm mb-2">Night Actions in Progress</h3>
+                <div className="flex gap-4 text-xs text-text-muted">
+                  {state.players.filter(p => p.isAlive && p.role === 'mafia').map(p => (
+                    <span key={p.id} className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-accent-red" /> {p.name} choosing target...</span>
+                  ))}
+                  {state.players.filter(p => p.isAlive && p.role === 'detective').map(p => (
+                    <span key={p.id} className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-accent-blue" /> {p.name} investigating...</span>
+                  ))}
+                  {state.players.filter(p => p.isAlive && p.role === 'doctor').map(p => (
+                    <span key={p.id} className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-400" /> {p.name} protecting...</span>
+                  ))}
+                </div>
+              </div>
             )}
-          </AnimatePresence>
 
-          {/* Night actions indicator */}
-          {isNight && (
-            <div className="absolute top-16 left-1/2 -translate-x-1/2 z-40 bg-bg-room/90 border border-accent-amber/30 rounded-lg px-6 py-3 text-center">
-              <h3 className="font-display text-accent-amber text-sm mb-2">Night Actions in Progress</h3>
-              <div className="flex gap-4 text-xs text-text-muted">
-                {state.players.filter(p => p.isAlive && p.role === 'mafia').map(p => (
-                  <span key={p.id} className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-accent-red" /> {p.name} choosing target...</span>
-                ))}
-                {state.players.filter(p => p.isAlive && p.role === 'detective').map(p => (
-                  <span key={p.id} className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-accent-blue" /> {p.name} investigating...</span>
-                ))}
-                {state.players.filter(p => p.isAlive && p.role === 'doctor').map(p => (
-                  <span key={p.id} className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-400" /> {p.name} protecting...</span>
-                ))}
+            {/* Voting indicator */}
+            {state.phase === 'day_vote' && (
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 bg-bg-room/90 border border-accent-amber/30 rounded-lg px-6 py-3 text-center">
+                <h3 className="font-display text-accent-amber text-sm mb-2">🗳️ Voting in Progress</h3>
+                <div className="flex gap-3 text-xs text-text-muted flex-wrap justify-center">
+                  {state.players.filter(p => p.isAlive).map(p => {
+                    const hasVoted = state.votes[p.id] !== undefined;
+                    return (
+                      <span key={p.id} className={`flex items-center gap-1 transition-colors ${hasVoted ? 'text-green-400' : 'text-text-muted'}`}>
+                        <span className={`w-2 h-2 rounded-full ${hasVoted ? 'bg-green-400' : 'bg-text-muted/40 animate-pulse'}`} />
+                        {p.name} {hasVoted ? '✓' : '...'}
+                      </span>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Voting indicator */}
-          {state.phase === 'day_vote' && (
-            <div className="absolute top-16 left-1/2 -translate-x-1/2 z-40 bg-bg-room/90 border border-accent-amber/30 rounded-lg px-6 py-3 text-center">
-              <h3 className="font-display text-accent-amber text-sm mb-2">🗳️ Voting in Progress</h3>
-              <div className="flex gap-3 text-xs text-text-muted">
-                {state.players.filter(p => p.isAlive).map(p => {
-                  const hasVoted = state.votes[p.id] !== undefined;
-                  return (
-                    <span key={p.id} className={`flex items-center gap-1 transition-colors ${hasVoted ? 'text-green-400' : 'text-text-muted'}`}>
-                      <span className={`w-2 h-2 rounded-full ${hasVoted ? 'bg-green-400' : 'bg-text-muted/40 animate-pulse'}`} />
-                      {p.name} {hasVoted ? '✓' : '...'}
+            {/* Active speech bubble */}
+            {activeSpeech && (
+              <motion.div
+                initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="absolute top-4 left-1/2 -translate-x-1/2 z-50 max-w-lg shadow-2xl"
+              >
+                <div className="bg-white text-bg-deep rounded-2xl overflow-hidden">
+                  <div
+                    className="px-4 py-2 flex items-center gap-2"
+                    style={{ backgroundColor: state.players.find(p => p.id === activeSpeech.playerId)?.color + '20' }}
+                  >
+                    <div
+                      className="w-6 h-6 rounded-full border-2 border-white shadow"
+                      style={{ backgroundColor: state.players.find(p => p.id === activeSpeech.playerId)?.color }}
+                    />
+                    <span className="font-display font-bold text-sm" style={{ color: state.players.find(p => p.id === activeSpeech.playerId)?.color }}>
+                      {state.players.find(p => p.id === activeSpeech.playerId)?.name}
                     </span>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Active speech bubble */}
-          {activeSpeech && (
-            <motion.div 
-              initial={{ opacity: 0, y: 10, scale: 0.9 }} 
-              animate={{ opacity: 1, y: 0, scale: 1 }} 
-              exit={{ opacity: 0, y: -10 }}
-              className="absolute top-4 left-1/2 -translate-x-1/2 z-50 max-w-lg shadow-2xl"
-            >
-              <div className="bg-white text-bg-deep rounded-2xl overflow-hidden">
-                {/* Speaker header */}
-                <div 
-                  className="px-4 py-2 flex items-center gap-2"
-                  style={{ backgroundColor: state.players.find(p => p.id === activeSpeech.playerId)?.color + '20' }}
-                >
-                  <div 
-                    className="w-6 h-6 rounded-full border-2 border-white shadow"
-                    style={{ backgroundColor: state.players.find(p => p.id === activeSpeech.playerId)?.color }} 
-                  />
-                  <span className="font-display font-bold text-sm" style={{ color: state.players.find(p => p.id === activeSpeech.playerId)?.color }}>
-                    {state.players.find(p => p.id === activeSpeech.playerId)?.name}
-                  </span>
-                  <span className="text-xs text-text-muted ml-auto">💬 Speaking</span>
+                    <span className="text-xs text-text-muted ml-auto">💬 Speaking</span>
+                  </div>
+                  <div className="px-4 py-3">
+                    <p className="font-body text-sm leading-relaxed text-bg-deep">{activeSpeech.text}</p>
+                  </div>
                 </div>
-                {/* Speech text */}
-                <div className="px-4 py-3">
-                  <p className="font-body text-sm leading-relaxed text-bg-deep">{activeSpeech.text}</p>
-                </div>
-              </div>
-              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-t-8 border-transparent border-t-white" />
-            </motion.div>
-          )}
+                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-t-8 border-transparent border-t-white" />
+              </motion.div>
+            )}
 
-          {rooms.map((room) => (
-            <Room key={room.id} room={room} isLit={!isNight} />
-          ))}
-
-          {state.players.map((player) => (
-            <Character
-              key={player.id}
-              player={player}
-              isRevealed={state.revealAllRoles || !player.isAlive}
-              isSpeaking={activeSpeech?.playerId === player.id}
-              isThinking={state.phase === 'day_vote' && player.isAlive && state.votes[player.id] === undefined}
-              onClick={() => {
-                if (state.humanInControl) {
-                  if (state.phase === 'day_vote') { setVoteAction('vote'); setShowVoteModal(true); }
-                  else if (state.phase === 'night' && player.id === state.humanPlayerId) {
-                    const humanPlayer = state.players.find((p) => p.id === state.humanPlayerId);
-                    if (humanPlayer?.role === 'mafia') setVoteAction('kill');
-                    else if (humanPlayer?.role === 'detective') setVoteAction('investigate');
-                    else if (humanPlayer?.role === 'doctor') setVoteAction('protect');
-                    setShowVoteModal(true);
+            {/* Characters */}
+            {state.players.map((player) => (
+              <Character
+                key={player.id}
+                player={player}
+                isRevealed={state.revealAllRoles || !player.isAlive}
+                isSpeaking={activeSpeech?.playerId === player.id}
+                isThinking={state.phase === 'day_vote' && player.isAlive && state.votes[player.id] === undefined}
+                onClick={() => {
+                  if (state.humanInControl) {
+                    if (state.phase === 'day_vote') { setVoteAction('vote'); setShowVoteModal(true); }
+                    else if (state.phase === 'night' && player.id === state.humanPlayerId) {
+                      const humanPlayer = state.players.find((p) => p.id === state.humanPlayerId);
+                      if (humanPlayer?.role === 'mafia') setVoteAction('kill');
+                      else if (humanPlayer?.role === 'detective') setVoteAction('investigate');
+                      else if (humanPlayer?.role === 'doctor') setVoteAction('protect');
+                      setShowVoteModal(true);
+                    }
                   }
-                }
-              }}
-            />
-          ))}
+                }}
+              />
+            ))}
+          </Room>
 
+          {/* Curtain transition overlay */}
+          <CurtainTransition
+            isOpen={showCurtain}
+            roomName={activeRoom.name}
+            roomIcon={activeRoom.icon}
+            roomDescription={activeRoom.description}
+            roomColor={activeRoom.color}
+          />
+
+          {/* Game over overlay */}
           {state.phase === 'game_over' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`absolute inset-0 flex items-center justify-center z-20 ${state.winner === 'mafia' ? 'bg-red-900/60' : 'bg-amber-900/40'}`}>
               <div className="bg-bg-room rounded-lg border-2 border-accent-amber p-8 text-center">
