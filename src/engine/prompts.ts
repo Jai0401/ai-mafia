@@ -61,7 +61,8 @@ export function buildDiscussionPrompt(
     })
     .join('\n');
 
-  const recentEvents = getRecentEvents(events);
+  const visibleEvents = events.filter(e => e.isPublic || e.actorId === agent.id);
+  const recentEvents = getRecentEvents(visibleEvents);
 
   let prompt = `You are ${agent.name}, a ${agent.role} in Mafia.
 Personality: ${agent.personality.description}
@@ -111,7 +112,8 @@ export function buildNightActionPrompt(
 ): string {
   const beliefsText = formatBeliefs(agent.beliefs, players);
   const knownRolesText = formatKnownRoles(agent.knownRoles, players);
-  const recentEvents = getRecentEvents(events);
+  const visibleEvents = events.filter(e => e.isPublic || e.actorId === agent.id);
+  const recentEvents = getRecentEvents(visibleEvents);
   
   if (action === 'mafia_kill') {
     const mafiaAlly = players.find(p => p.role === 'mafia' && p.id !== agent.id && p.isAlive);
@@ -214,7 +216,8 @@ export function buildVotePrompt(
     })
     .join('\n');
 
-  const recentEvents = getRecentEvents(events);
+  const visibleEvents = events.filter(e => e.isPublic || e.actorId === agent.id);
+  const recentEvents = getRecentEvents(visibleEvents);
 
   return `You are ${agent.name}. Time to vote.
 
