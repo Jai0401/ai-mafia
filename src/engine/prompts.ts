@@ -27,7 +27,7 @@ function formatBeliefs(beliefs: AgentBeliefs, players: Player[]): string {
   return `Your beliefs about players:\n${entries || '  No strong beliefs yet.'}\n\n${deductions}\n\n${strategy}${relationships ? '\n\nYour relationships:\n' + relationships : ''}`;
 }
 
-function formatKnownRoles(knownRoles: Record<string, Role>, players: Player[]): string {
+function formatKnownRoles(knownRoles: Record<string, Role>, _players: Player[]): string {
   const entries = Object.entries(knownRoles)
     .map(([name, role]) => `  ${name}: ${role}`)
     .join('\n');

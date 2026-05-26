@@ -105,9 +105,10 @@ export class GameEngine {
   private updateKnownRolesAfterElimination(eliminatedPlayer: Player): void {
     this.agents.forEach(agent => {
       agent.knownRoles[eliminatedPlayer.name] = eliminatedPlayer.role;
-      // Update belief entry with actual role
+      // Update belief entry with actual role (detective/doctor are civilian team)
       if (agent.beliefs.players[eliminatedPlayer.id]) {
-        agent.beliefs.players[eliminatedPlayer.id].suspectedRole = eliminatedPlayer.role;
+        const suspectedRole = eliminatedPlayer.role === 'mafia' ? 'mafia' : 'civilian';
+        agent.beliefs.players[eliminatedPlayer.id].suspectedRole = suspectedRole;
         agent.beliefs.players[eliminatedPlayer.id].reason = `Revealed as ${eliminatedPlayer.role} upon elimination.`;
       }
     });
@@ -119,20 +120,6 @@ export class GameEngine {
       localStorage.setItem('ai-mafia-agent-states', JSON.stringify(data));
     } catch {
       // localStorage may be full
-    }
-  }
-
-  private loadAgents(): Map<string, AgentState> | null {
-    try {
-      const raw = localStorage.getItem('ai-mafia-agent-states');
-      if (!raw) return null;
-      const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed)) return null;
-      const map = new Map<string, AgentState>();
-      parsed.forEach(([id, agent]) => map.set(id, agent));
-      return map;
-    } catch {
-      return null;
     }
   }
 
@@ -350,7 +337,8 @@ export class GameEngine {
         if (target && detective) {
           detective.knownRoles[target.name] = target.role;
           if (detective.beliefs.players[target.id]) {
-            detective.beliefs.players[target.id].suspectedRole = target.role;
+            const suspectedRole = target.role === 'mafia' ? 'mafia' : 'civilian';
+            detective.beliefs.players[target.id].suspectedRole = suspectedRole;
             detective.beliefs.players[target.id].reason = 'Confirmed by investigation.';
           }
         }
