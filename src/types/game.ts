@@ -58,6 +58,15 @@ export interface AgentState {
   name: string;
   role: Role;
   personality: PersonalityProfile;
+
+  // NEW: Structured belief state (managed by LLM)
+  beliefs: AgentBeliefs;
+
+  // Engine-managed factual state
+  knownRoles: Record<string, Role>;      // Revealed upon elimination
+  votingHistory: VoteRecord[];
+
+  // DEPRECATED: kept for backward compat during transition
   memory: GameEvent[];
   suspicions: Record<string, number>;
   trust: Record<string, number>;
@@ -70,6 +79,35 @@ export interface PersonalityProfile {
   suspicionBias: number;
   voteTendency: 'independent' | 'majority' | 'loyal';
   bluffer: boolean;
+}
+
+export interface BeliefEntry {
+  suspicion: number;        // 0-1
+  reason: string;           // WHY they suspect/innocent this player
+  suspectedRole: 'mafia' | 'civilian' | 'unknown';
+  lastUpdated: number;      // round number
+}
+
+export interface AgentBeliefs {
+  players: Record<string, BeliefEntry>;
+  deductions: string[];     // max 5 tactical insights
+  strategy: string;         // current playstyle
+  relationships: {
+    allies: string[];       // player IDs publicly defended
+    enemies: string[];      // player IDs accused
+  };
+}
+
+export interface VoteRecord {
+  round: number;
+  targetId: string;
+  reason: string;
+}
+
+export interface AgentStateDiff {
+  beliefs?: Partial<AgentBeliefs>;
+  // Only update players that changed
+  playerBeliefs?: Record<string, Partial<BeliefEntry>>;
 }
 
 export type { GameAction } from '../context/gameReducer';
