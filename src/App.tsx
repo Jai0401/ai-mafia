@@ -16,6 +16,7 @@ export default function App() {
   const [humanMode, setHumanMode] = useState<HumanMode>('spectator');
   const [configuredPlayers, setConfiguredPlayers] = useState<Player[] | undefined>(undefined);
   const [selectedPlayerCount, setSelectedPlayerCount] = useState<number>(6);
+  const [rolePreference, setRolePreference] = useState<string | undefined>(undefined);
 
   return (
     <GameProvider>
@@ -38,8 +39,9 @@ export default function App() {
       {phase === 'game_config' && (
         <GameConfig
           mode={humanMode}
-          onNext={(playerCount) => {
+          onNext={(playerCount, pref) => {
             setSelectedPlayerCount(playerCount);
+            setRolePreference(pref);
             setPhase('character_config');
           }}
         />
@@ -54,7 +56,7 @@ export default function App() {
           onBack={() => setPhase('game_config')}
         />
       )}
-      {phase === 'game' && <Game apiKey={apiKey} preConfiguredPlayers={configuredPlayers} />}
+      {phase === 'game' && <Game apiKey={apiKey} humanMode={humanMode} rolePreference={rolePreference} preConfiguredPlayers={configuredPlayers} />}
     </GameProvider>
   );
 }

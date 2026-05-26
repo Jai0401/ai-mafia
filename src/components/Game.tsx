@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useGame } from '../context/GameContext';
 import { useGameLoop } from '../hooks/useGameLoop';
 import { GameEngine } from '../engine/GameEngine';
-import type { Player } from '../types/game';
+import type { Player, HumanMode } from '../types/game';
 import PhaseBar from './UI/PhaseBar';
 import PlayerList from './UI/PlayerList';
 import GameLog from './UI/GameLog';
@@ -16,10 +16,12 @@ import { rooms, phaseToRoom } from '../data/roomLayout';
 
 interface Props {
   apiKey: string;
+  humanMode: HumanMode;
+  rolePreference?: string;
   preConfiguredPlayers?: Player[];
 }
 
-export default function Game({ apiKey, preConfiguredPlayers }: Props) {
+export default function Game({ apiKey, humanMode, rolePreference, preConfiguredPlayers }: Props) {
   const { state, dispatch } = useGame();
   const engineRef = useRef<GameEngine | null>(null);
   const stateRef = useRef(state);
@@ -58,13 +60,13 @@ export default function Game({ apiKey, preConfiguredPlayers }: Props) {
     if (!engineRef.current) {
       engineRef.current = new GameEngine(dispatch, () => stateRef.current, apiKey);
       if (preConfiguredPlayers && preConfiguredPlayers.length > 0) {
-        engineRef.current.initializeGameWithPlayers(preConfiguredPlayers, state.humanMode);
+        engineRef.current.initializeGameWithPlayers(preConfiguredPlayers, humanMode, rolePreference);
       } else {
-        engineRef.current.initializeGame(state.humanMode, undefined);
+        engineRef.current.initializeGame(humanMode, rolePreference);
       }
     }
     return () => { engineRef.current?.stop(); };
-  }, [dispatch, apiKey, state.humanMode, preConfiguredPlayers]);
+  }, [dispatch, apiKey, humanMode, rolePreference, preConfiguredPlayers]);
 
   useGameLoop();
 
@@ -151,6 +153,7 @@ export default function Game({ apiKey, preConfiguredPlayers }: Props) {
   const handleWhisperSubmit = () => {
     if (whisperText.trim() && whisperTarget) {
       dispatch({ type: 'HUMAN_WHISPER', payload: { targetId: whisperTarget, message: whisperText.trim() } });
+      engineRef.current?.setWhisper(whisperTarget, whisperText.trim());
       setWhisperText('');
       setShowWhisperInput(false);
       setWhisperTarget('');
@@ -166,7 +169,7 @@ export default function Game({ apiKey, preConfiguredPlayers }: Props) {
       <PhaseBar phase={state.phase} round={state.round} speed={state.speed} isPaused={state.isPaused} onSpeedChange={handleSpeedChange} onPauseToggle={handlePauseToggle} />
 
       <div className="flex-1 flex overflow-hidden">
-        <PlayerList players={state.players} revealAllRoles={state.revealAllRoles} humanPlayerId={state.humanPlayerId} humanMode={state.humanMode} onWhisper={(id) => { setWhisperTarget(id); setShowWhisperInput(true); }} />
+        <PlayerList players={state.players} revealAllRoles={state.revealAllRoles} humanPlayerId={state.humanPlayerId} humanMode={humanMode} onWhisper={(id) => { setWhisperTarget(id); setShowWhisperInput(true); }} />
 
         <div className="flex-1 relative">
           {/* Single active room — full screen */}
@@ -285,7 +288,7 @@ export default function Game({ apiKey, preConfiguredPlayers }: Props) {
 
       <div className="h-48 p-4 pt-0 flex gap-4">
         <div className="flex-1"><GameLog events={state.events} players={state.players} /></div>
-        {state.humanMode === 'player' && state.humanPlayerId && (
+        {humanMode === 'player' && state.humanPlayerId && (
           <div className="w-64 bg-bg-room rounded-lg border border-text-muted/20 p-4 flex flex-col gap-2">
             <h3 className="font-display text-xs text-accent-amber uppercase tracking-wider">Your Turn</h3>
             <button onClick={handleHumanControlToggle} className={`py-2 px-3 rounded text-sm font-semibold transition-colors ${state.humanInControl ? 'bg-accent-amber text-bg-deep' : 'bg-bg-deep text-text-muted border border-text-muted/30'}`}>
