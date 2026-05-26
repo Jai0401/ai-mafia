@@ -14,6 +14,8 @@ export function countVotes(
   const voteCounts: Record<string, number> = {};
 
   Object.entries(votes).forEach(([, targetId]) => {
+    // Skip empty/abstain votes
+    if (!targetId || targetId === '' || targetId === 'abstain') return;
     voteCounts[targetId] = (voteCounts[targetId] || 0) + 1;
   });
 
@@ -27,6 +29,18 @@ export function countVotes(
   // Log all votes
   Object.entries(votes).forEach(([voterId, targetId]) => {
     const voter = players.find((p) => p.id === voterId);
+    if (!targetId || targetId === '' || targetId === 'abstain') {
+      events.push({
+        round,
+        phase: 'day_vote',
+        type: 'vote',
+        actorId: voterId,
+        content: `${voter?.name} abstained from voting.`,
+        timestamp: Date.now(),
+        isPublic: true,
+      });
+      return;
+    }
     const target = players.find((p) => p.id === targetId);
     events.push({
       round,
@@ -34,7 +48,7 @@ export function countVotes(
       type: 'vote',
       actorId: voterId,
       targetId,
-      content: `${voter?.name} voted for ${target?.name}.`,
+      content: `${voter?.name} voted for ${target?.name || 'unknown'}.`,
       timestamp: Date.now(),
       isPublic: true,
     });
@@ -68,13 +82,13 @@ export function countVotes(
       isPublic: true,
     });
   } else {
-    // No votes cast
+    // No valid votes cast
     events.push({
       round,
       phase: 'day_vote',
       type: 'system',
       actorId: 'system',
-      content: 'No votes were cast. No one was eliminated.',
+      content: 'No valid votes were cast. No one was eliminated.',
       timestamp: Date.now(),
       isPublic: true,
     });

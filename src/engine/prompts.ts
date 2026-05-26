@@ -105,6 +105,8 @@ export function buildVotePrompt(
     })
     .join('\n');
 
+  const aliveOthers = players.filter(p => p.isAlive && p.id !== agent.id).map(p => p.name).join(', ');
+
   return `You are ${agent.name}. Based on everything said today, vote to eliminate one player.
 Your suspicion scores:
 ${suspicionText || 'No strong suspicions yet.'}
@@ -115,7 +117,10 @@ ${speechesText || 'No statements today.'}
 Game state:
 ${recentEvents}
 
-Respond with ONLY: {"vote": "player_name", "confidence": 0.0}`;
+Alive players you can vote for: ${aliveOthers}
+
+If you have no strong suspicion, you may abstain by voting "abstain".
+Respond with ONLY: {"vote": "player_name"} or {"vote": "abstain"}`;
 }
 
 function getRecentEvents(events: GameEvent[]): string {

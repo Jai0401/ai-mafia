@@ -89,7 +89,16 @@ export class AgentRunner {
 
     try {
       const parsed = JSON.parse(response.replace(/^[^{]*/, '').replace(/[^}]*$/, ''));
-      const targetPlayer = players.find((p) => p.name.toLowerCase() === parsed.target?.toLowerCase());
+      const targetName = parsed.target;
+      if (!targetName || typeof targetName !== 'string') {
+        throw new Error('No target field');
+      }
+
+      // Fuzzy match: exact first, then partial
+      let targetPlayer = players.find((p) => p.name.toLowerCase() === targetName.toLowerCase());
+      if (!targetPlayer) {
+        targetPlayer = players.find((p) => p.name.toLowerCase().includes(targetName.toLowerCase()));
+      }
 
       return {
         playerId: agent.id,
@@ -119,14 +128,30 @@ export class AgentRunner {
 
     try {
       const parsed = JSON.parse(response.replace(/^[^{]*/, '').replace(/[^}]*$/, ''));
-      const targetPlayer = players.find((p) => p.name.toLowerCase() === parsed.vote?.toLowerCase());
+      
+      // Handle explicit abstain
+      if (parsed.vote?.toLowerCase() === 'abstain') {
+        return { targetId: 'abstain', confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.5 };
+      }
+
+      // Try multiple possible keys the LLM might use
+      const voteName = parsed.vote || parsed.target || parsed.choice || parsed.eliminate || parsed.player;
+      if (!voteName || typeof voteName !== 'string') {
+        throw new Error('No valid vote field found');
+      }
+
+      // Fuzzy match: exact first, then partial case-insensitive
+      let targetPlayer = players.find((p) => p.name.toLowerCase() === voteName.toLowerCase());
+      if (!targetPlayer) {
+        targetPlayer = players.find((p) => p.name.toLowerCase().includes(voteName.toLowerCase()));
+      }
 
       return {
         targetId: targetPlayer?.id || '',
         confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.5,
       };
     } catch {
-      // Fallback: vote for most suspicious player
+      // Fallback: vote for most suspicious player, or abstain if no suspicions
       let mostSuspicious = '';
       let highestScore = -1;
       Object.entries(agent.suspicions).forEach(([id, score]) => {
@@ -135,6 +160,10 @@ export class AgentRunner {
           mostSuspicious = id;
         }
       });
+      // If no suspicions, abstain
+      if (!mostSuspicious) {
+        return { targetId: 'abstain', confidence: 0.3 };
+      }
       return { targetId: mostSuspicious, confidence: 0.3 };
     }
   }
@@ -157,7 +186,11 @@ Example: {"Viktor": 0.8, "Luna": 0.2}`;
     try {
       const parsed = JSON.parse(response.replace(/^[^{]*/, '').replace(/[^}]*$/, ''));
       Object.entries(parsed).forEach(([name, score]) => {
-        const player = players.find((p) => p.name.toLowerCase() === name.toLowerCase());
+        // Fuzzy match player names
+        let player = players.find((p) => p.name.toLowerCase() === name.toLowerCase());
+        if (!player) {
+          player = players.find((p) => p.name.toLowerCase().includes(name.toLowerCase()));
+        }
         if (player && typeof score === 'number') {
           newSuspicions[player.id] = Math.max(0, Math.min(1, score));
         }

@@ -135,35 +135,27 @@ export class GameEngine {
     const state = this.getState();
 
     // Get night actions from alive special roles
-    // Mafia: only ONE mafia member submits the kill (Godfather/leader) to avoid conflicts
-    const nightActionPromises: Promise<void>[] = [];
-
-    // Find mafia members
+    // Execute night actions sequentially with delays to avoid 429 rate limits
     const aliveMafia = state.players.filter(p => p.isAlive && p.role === 'mafia');
     if (aliveMafia.length > 0) {
-      // The first mafia member is the "leader" who submits the kill
+      // The first alive mafia is the "leader" who submits the kill
       const leaderMafia = aliveMafia[0];
       const agent = this.agents.get(leaderMafia.id);
       if (agent) {
-        nightActionPromises.push(
-          (async () => {
-            try {
-              // Filter out other mafia as valid targets
-              const nonMafiaTargets = state.players.filter(p => p.isAlive && p.role !== 'mafia');
-              const nightAction = await this.agentRunner.getNightAction(agent, 'mafia_kill', state.events, state.players);
-              // Validate: mafia cannot kill other mafia
-              const target = state.players.find(p => p.id === nightAction.targetId);
-              if (target && target.role === 'mafia' && nonMafiaTargets.length > 0) {
-                // Redirect to a random non-mafia target
-                const randomTarget = nonMafiaTargets[Math.floor(Math.random() * nonMafiaTargets.length)];
-                nightAction.targetId = randomTarget.id;
-              }
-              this.dispatch({ type: 'SUBMIT_NIGHT_ACTION', payload: nightAction });
-            } catch (error) {
-              console.error('Night action failed:', error);
-            }
-          })()
-        );
+        try {
+          const nightAction = await this.agentRunner.getNightAction(agent, 'mafia_kill', state.events, state.players);
+          // Validate: mafia cannot kill other mafia
+          const target = state.players.find(p => p.id === nightAction.targetId);
+          const nonMafiaTargets = state.players.filter(p => p.isAlive && p.role !== 'mafia');
+          if (target && target.role === 'mafia' && nonMafiaTargets.length > 0) {
+            const randomTarget = nonMafiaTargets[Math.floor(Math.random() * nonMafiaTargets.length)];
+            nightAction.targetId = randomTarget.id;
+          }
+          this.dispatch({ type: 'SUBMIT_NIGHT_ACTION', payload: nightAction });
+        } catch (error) {
+          console.error('Night action failed:', error);
+        }
+        await this.delay(600);
       }
     }
 
@@ -172,16 +164,13 @@ export class GameEngine {
     if (aliveDetective) {
       const agent = this.agents.get(aliveDetective.id);
       if (agent) {
-        nightActionPromises.push(
-          (async () => {
-            try {
-              const nightAction = await this.agentRunner.getNightAction(agent, 'detective_investigate', state.events, state.players);
-              this.dispatch({ type: 'SUBMIT_NIGHT_ACTION', payload: nightAction });
-            } catch (error) {
-              console.error('Night action failed:', error);
-            }
-          })()
-        );
+        try {
+          const nightAction = await this.agentRunner.getNightAction(agent, 'detective_investigate', state.events, state.players);
+          this.dispatch({ type: 'SUBMIT_NIGHT_ACTION', payload: nightAction });
+        } catch (error) {
+          console.error('Night action failed:', error);
+        }
+        await this.delay(600);
       }
     }
 
@@ -190,29 +179,22 @@ export class GameEngine {
     if (aliveDoctor) {
       const agent = this.agents.get(aliveDoctor.id);
       if (agent) {
-        nightActionPromises.push(
-          (async () => {
-            try {
-              const nightAction = await this.agentRunner.getNightAction(agent, 'doctor_protect', state.events, state.players);
-              // Doctor cannot protect themselves
-              if (nightAction.targetId === aliveDoctor.id) {
-                const otherAlive = state.players.filter(p => p.isAlive && p.id !== aliveDoctor.id);
-                if (otherAlive.length > 0) {
-                  nightAction.targetId = otherAlive[Math.floor(Math.random() * otherAlive.length)].id;
-                }
-              }
-              this.dispatch({ type: 'SUBMIT_NIGHT_ACTION', payload: nightAction });
-            } catch (error) {
-              console.error('Night action failed:', error);
+        try {
+          const nightAction = await this.agentRunner.getNightAction(agent, 'doctor_protect', state.events, state.players);
+          // Doctor cannot protect themselves
+          if (nightAction.targetId === aliveDoctor.id) {
+            const otherAlive = state.players.filter(p => p.isAlive && p.id !== aliveDoctor.id);
+            if (otherAlive.length > 0) {
+              nightAction.targetId = otherAlive[Math.floor(Math.random() * otherAlive.length)].id;
             }
-          })()
-        );
+          }
+          this.dispatch({ type: 'SUBMIT_NIGHT_ACTION', payload: nightAction });
+        } catch (error) {
+          console.error('Night action failed:', error);
+        }
+        await this.delay(600);
       }
     }
-
-    // Wait for all night actions in parallel
-    await Promise.all(nightActionPromises);
-    await this.delay(200);
 
     // Re-read state after all actions submitted
     const updatedState = this.getState();
@@ -229,6 +211,7 @@ export class GameEngine {
     });
 
     // Move dead players to study room (morgue)
+    // Use next available position; state may not be updated yet so we count existing dead
     if (result.killedPlayerId) {
       this.movePlayerToRoom(result.killedPlayerId, 'study');
     }
@@ -315,7 +298,7 @@ export class GameEngine {
       }
     }
 
-    // Update suspicions after discussion
+    // Update suspicions after discussion — sequential with delays to avoid 429
     await this.updateAllSuspicions(state);
 
     // Start voting
@@ -331,53 +314,52 @@ export class GameEngine {
 
     const state = this.getState();
     const alivePlayers = state.players.filter((p) => p.isAlive);
-    const aiPlayers = alivePlayers.filter(p => !p.isHuman || !state.humanInControl);
-    const humanPlayers = alivePlayers.filter(p => p.isHuman && state.humanInControl);
+    const votes: Record<string, string> = {};
 
-    // Collect AI votes in PARALLEL for speed
-    const votePromises = aiPlayers.map(async (player) => {
-      if (!this.isRunning) return null;
+    // Collect votes SEQUENTIALLY to avoid rate limits, with visual indicator updating as we go
+    for (const player of alivePlayers) {
+      if (!this.isRunning) return;
 
       const agent = this.agents.get(player.id);
-      if (!agent) return null;
+      if (!agent) continue;
 
-      try {
-        const voteResult = await this.agentRunner.getVote(agent, state.events, state.players);
-        return { voterId: player.id, targetId: voteResult.targetId };
-      } catch (error) {
-        console.error(`Vote failed for ${player.name}:`, error);
-        // Fallback: random vote among non-self alive players
-        const targets = state.players.filter(p => p.isAlive && p.id !== player.id);
-        const randomTarget = targets[Math.floor(Math.random() * targets.length)];
-        if (randomTarget) {
-          return { voterId: player.id, targetId: randomTarget.id };
+      if (player.isHuman && state.humanInControl) {
+        // Human votes - handled by UI
+        await this.delay(600 / state.speed);
+      } else {
+        try {
+          const voteResult = await this.agentRunner.getVote(agent, state.events, state.players);
+          // Validate: target must be a valid alive player (not self)
+          const target = state.players.find(p => p.id === voteResult.targetId && p.isAlive && p.id !== player.id);
+          let finalTargetId = voteResult.targetId;
+          if (!target) {
+            // Fallback: random valid target
+            const validTargets = state.players.filter(p => p.isAlive && p.id !== player.id);
+            if (validTargets.length > 0) {
+              finalTargetId = validTargets[Math.floor(Math.random() * validTargets.length)].id;
+            }
+          }
+          votes[player.id] = finalTargetId;
+          this.dispatch({
+            type: 'SUBMIT_VOTE',
+            payload: { voterId: player.id, targetId: finalTargetId },
+          });
+        } catch (error) {
+          console.error(`Vote failed for ${player.name}:`, error);
+          // Fallback: random vote
+          const targets = state.players.filter(p => p.isAlive && p.id !== player.id);
+          const randomTarget = targets[Math.floor(Math.random() * targets.length)];
+          if (randomTarget) {
+            votes[player.id] = randomTarget.id;
+            this.dispatch({
+              type: 'SUBMIT_VOTE',
+              payload: { voterId: player.id, targetId: randomTarget.id },
+            });
+          }
         }
-        return null;
+        await this.delay(500 / state.speed);
       }
-    });
-
-    const aiVoteResults = await Promise.all(votePromises);
-
-    // Dispatch all AI votes
-    const votes: Record<string, string> = {};
-    aiVoteResults.forEach(result => {
-      if (result) {
-        votes[result.voterId] = result.targetId;
-        this.dispatch({
-          type: 'SUBMIT_VOTE',
-          payload: result,
-        });
-      }
-    });
-
-    // Wait for human votes (UI-driven)
-    if (humanPlayers.length > 0) {
-      // Give human a moment, or wait for UI submission
-      await this.delay(1000 / state.speed);
     }
-
-    // Small delay for visual feedback before resolving
-    await this.delay(800 / state.speed);
 
     // Re-read state to include human votes
     const updatedState = this.getState();
@@ -437,34 +419,37 @@ export class GameEngine {
   }
 
   private async updateAllSuspicions(state: GameState): Promise<void> {
-    const promises = Array.from(this.agents.values())
-      .filter((agent) => state.players.find((p) => p.id === agent.id)?.isAlive)
-      .map(async (agent) => {
-        const recentEvents = state.events.slice(-5);
-        try {
-          const newSuspicions = await this.agentRunner.updateSuspicions(
-            agent,
-            recentEvents,
-            state.players,
-          );
-          agent.suspicions = newSuspicions;
-        } catch (error) {
-          console.error('Failed to update suspicions:', error);
-        }
-      });
+    const aliveAgents = Array.from(this.agents.values())
+      .filter((agent) => state.players.find((p) => p.id === agent.id)?.isAlive);
 
-    await Promise.all(promises);
+    for (const agent of aliveAgents) {
+      if (!this.isRunning) return;
+      const recentEvents = state.events.slice(-5);
+      try {
+        const newSuspicions = await this.agentRunner.updateSuspicions(
+          agent,
+          recentEvents,
+          state.players,
+        );
+        agent.suspicions = newSuspicions;
+      } catch (error) {
+        console.error('Failed to update suspicions:', error);
+      }
+      await this.delay(400);
+    }
   }
 
   private moveCharactersToRoom(roomId: string): void {
     const positions = roomPositions[roomId] || roomPositions['dining'];
     const state = this.getState();
 
-    state.players.forEach((player, i) => {
+    let positionIndex = 0;
+    state.players.forEach((player) => {
       // Dead players stay permanently in the study room (morgue)
       if (!player.isAlive) return;
       
-      const pos = positions[i % positions.length];
+      const pos = positions[positionIndex % positions.length];
+      positionIndex++;
       this.dispatch({
         type: 'SET_TARGET_POSITION',
         payload: {
@@ -478,10 +463,18 @@ export class GameEngine {
   private movePlayerToRoom(playerId: string, roomId: string): void {
     const positions = roomPositions[roomId] || roomPositions['dining'];
     const state = this.getState();
+    // Count currently dead players to find next morgue slot.
+    // If state hasn't updated yet (React async dispatch), the new corpse won't
+    // be counted, so deadPlayers.length gives us the next free index.
     const deadPlayers = state.players.filter(p => !p.isAlive);
-    const playerIndex = deadPlayers.findIndex(p => p.id === playerId);
-    
-    const pos = positions[playerIndex % positions.length];
+    const slotIndex = Math.min(deadPlayers.length, positions.length - 1);
+    const pos = positions[slotIndex];
+
+    if (!pos) {
+      console.warn(`No position available in ${roomId} for ${playerId}`);
+      return;
+    }
+
     this.dispatch({
       type: 'SET_TARGET_POSITION',
       payload: {
