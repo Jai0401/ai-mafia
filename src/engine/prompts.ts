@@ -51,12 +51,14 @@ export function buildNightActionPrompt(
     const mafiaAlly = players.find(
       (p) => p.role === 'mafia' && p.id !== agent.id && p.isAlive,
     );
+    const nonMafiaTargets = players.filter(p => p.isAlive && p.role !== 'mafia' && p.id !== agent.id);
+    const targetNames = nonMafiaTargets.map((p) => p.name).join(', ');
     return `You are ${agent.name}, a Mafia member. Your fellow Mafia: ${mafiaAlly?.name || 'none'}.
-Alive players: ${aliveNames}
+Alive non-Mafia targets: ${targetNames}
 Game state:
 ${recentEvents}
 
-Choose ONE player to eliminate tonight.
+Choose ONE player to eliminate tonight. You CANNOT target fellow Mafia members.
 Respond with ONLY a JSON object: {"target": "player_name", "reasoning": "..."}`;
   }
 
@@ -75,7 +77,7 @@ Alive players: ${aliveNames}
 Game state:
 ${recentEvents}
 
-Choose ONE player to protect tonight. If the Mafia targets them, they will survive.
+Choose ONE player to protect tonight. You CANNOT protect yourself. If the Mafia targets them, they will survive.
 Respond with ONLY a JSON object: {"target": "player_name", "reasoning": "..."}`;
 }
 

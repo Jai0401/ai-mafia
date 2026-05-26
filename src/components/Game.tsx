@@ -172,6 +172,24 @@ export default function Game({ apiKey, preConfiguredPlayers }: Props) {
             </div>
           )}
 
+          {/* Voting indicator */}
+          {state.phase === 'day_vote' && (
+            <div className="absolute top-16 left-1/2 -translate-x-1/2 z-40 bg-bg-room/90 border border-accent-amber/30 rounded-lg px-6 py-3 text-center">
+              <h3 className="font-display text-accent-amber text-sm mb-2">🗳️ Voting in Progress</h3>
+              <div className="flex gap-3 text-xs text-text-muted">
+                {state.players.filter(p => p.isAlive).map(p => {
+                  const hasVoted = state.votes[p.id] !== undefined;
+                  return (
+                    <span key={p.id} className={`flex items-center gap-1 transition-colors ${hasVoted ? 'text-green-400' : 'text-text-muted'}`}>
+                      <span className={`w-2 h-2 rounded-full ${hasVoted ? 'bg-green-400' : 'bg-text-muted/40 animate-pulse'}`} />
+                      {p.name} {hasVoted ? '✓' : '...'}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Active speech bubble */}
           {activeSpeech && (
             <motion.div 
@@ -214,6 +232,7 @@ export default function Game({ apiKey, preConfiguredPlayers }: Props) {
               player={player}
               isRevealed={state.revealAllRoles || !player.isAlive}
               isSpeaking={activeSpeech?.playerId === player.id}
+              isThinking={state.phase === 'day_vote' && player.isAlive && state.votes[player.id] === undefined}
               onClick={() => {
                 if (state.humanInControl) {
                   if (state.phase === 'day_vote') { setVoteAction('vote'); setShowVoteModal(true); }

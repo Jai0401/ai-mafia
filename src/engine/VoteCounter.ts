@@ -17,7 +17,7 @@ export function countVotes(
     voteCounts[targetId] = (voteCounts[targetId] || 0) + 1;
   });
 
-  const maxVotes = Math.max(...Object.values(voteCounts));
+  const maxVotes = Math.max(...Object.values(voteCounts), 0);
   const tiedPlayers = Object.entries(voteCounts)
     .filter(([, count]) => count === maxVotes)
     .map(([id]) => id);
@@ -56,19 +56,29 @@ export function countVotes(
     return { eliminatedPlayerId: eliminatedId, events };
   }
 
-  // Tie: random elimination from tied players
-  const eliminatedId = tiedPlayers[Math.floor(Math.random() * tiedPlayers.length)];
-  const eliminated = players.find((p) => p.id === eliminatedId);
-  events.push({
-    round,
-    phase: 'day_vote',
-    type: 'elimination',
-    actorId: 'system',
-    targetId: eliminatedId,
-    content: `The vote was tied! ${eliminated?.name} was randomly eliminated. They were a ${eliminated?.role}.`,
-    timestamp: Date.now(),
-    isPublic: true,
-  });
+  // Tie: no one is eliminated (standard mafia rules)
+  if (tiedPlayers.length > 1) {
+    events.push({
+      round,
+      phase: 'day_vote',
+      type: 'system',
+      actorId: 'system',
+      content: `The vote was tied between ${tiedPlayers.map(id => players.find(p => p.id === id)?.name).join(' and ')}! No one was eliminated.`,
+      timestamp: Date.now(),
+      isPublic: true,
+    });
+  } else {
+    // No votes cast
+    events.push({
+      round,
+      phase: 'day_vote',
+      type: 'system',
+      actorId: 'system',
+      content: 'No votes were cast. No one was eliminated.',
+      timestamp: Date.now(),
+      isPublic: true,
+    });
+  }
 
-  return { eliminatedPlayerId: eliminatedId, events };
+  return { events };
 }
