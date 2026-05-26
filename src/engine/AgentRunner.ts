@@ -1,10 +1,65 @@
 // src/engine/AgentRunner.ts
-import type {  AgentState, GameEvent, Player, NightAction  } from "../types/game";
+import type { AgentState, GameEvent, Player, NightAction, AgentStateDiff } from "../types/game";
 import {
   buildDiscussionPrompt,
   buildNightActionPrompt,
   buildVotePrompt,
 } from './prompts';
+
+function parseStateUpdates(raw: string, players: Player[]): AgentStateDiff | null {
+  try {
+    const parsed = JSON.parse(raw.replace(/^[^{]*/, '').replace(/[^}]*$/, ''));
+    if (!parsed.state_updates) return null;
+
+    const diff: AgentStateDiff = {};
+
+    // Parse player belief updates
+    if (parsed.state_updates.players) {
+      diff.playerBeliefs = {};
+      Object.entries(parsed.state_updates.players).forEach(([name, entry]: [string, any]) => {
+        const player = players.find(p => p.name.toLowerCase() === name.toLowerCase())
+          || players.find(p => p.name.toLowerCase().includes(name.toLowerCase()));
+        if (!player) return;
+
+        diff.playerBeliefs![player.id] = {};
+        if (typeof entry.suspicion === 'number') {
+          diff.playerBeliefs![player.id].suspicion = Math.max(0, Math.min(1, entry.suspicion));
+        }
+        if (entry.suspectedRole && ['mafia', 'civilian', 'unknown'].includes(entry.suspectedRole)) {
+          diff.playerBeliefs![player.id].suspectedRole = entry.suspectedRole;
+        }
+        if (typeof entry.reason === 'string') {
+          diff.playerBeliefs![player.id].reason = entry.reason;
+        }
+      });
+    }
+
+    // Parse deductions
+    if (Array.isArray(parsed.state_updates.deductions)) {
+      diff.beliefs = { deductions: parsed.state_updates.deductions.filter((d: any) => typeof d === 'string') };
+    }
+
+    // Parse strategy
+    if (typeof parsed.state_updates.strategy === 'string') {
+      diff.beliefs = diff.beliefs || {};
+      diff.beliefs.strategy = parsed.state_updates.strategy;
+    }
+
+    // Parse relationships
+    if (parsed.state_updates.relationships) {
+      const rel = parsed.state_updates.relationships;
+      diff.beliefs = diff.beliefs || {};
+      diff.beliefs.relationships = {
+        allies: Array.isArray(rel.allies) ? rel.allies : [],
+        enemies: Array.isArray(rel.enemies) ? rel.enemies : [],
+      };
+    }
+
+    return diff;
+  } catch {
+    return null;
+  }
+}
 
 interface OpenRouterResponse {
   choices: {
@@ -72,10 +127,20 @@ export class AgentRunner {
     events: GameEvent[],
     players: Player[],
     whisper?: string,
-  ): Promise<string> {
+  ): Promise<{ speech: string; stateUpdates: AgentStateDiff | null }> {
     const prompt = buildDiscussionPrompt(agent, round, events, players, whisper);
-    const response = await this.callLLMWithRetry(prompt, 150);
-    return response.replace(/"/g, '"').replace(/"/g, '"').trim();
+    const response = await this.callLLMWithRetry(prompt, 250);
+
+    try {
+      const parsed = JSON.parse(response.replace(/^[^{]*/, '').replace(/[^}]*$/, ''));
+      const speech = parsed.speech || "I'm thinking...";
+      const stateUpdates = parseStateUpdates(response, players);
+      return { speech, stateUpdates };
+    } catch {
+      // Fallback: extract first sentence as speech, no state update
+      const fallbackSpeech = response.split('.')[0]?.trim() || "I'm not sure what to think.";
+      return { speech: fallbackSpeech, stateUpdates: null };
+    }
   }
 
   async getNightAction(
@@ -83,7 +148,7 @@ export class AgentRunner {
     action: 'mafia_kill' | 'detective_investigate' | 'doctor_protect',
     events: GameEvent[],
     players: Player[],
-  ): Promise<NightAction> {
+  ): Promise<NightAction & { stateUpdates: AgentStateDiff | null }> {
     const prompt = buildNightActionPrompt(agent, action, events, players);
     const response = await this.callLLMWithRetry(prompt, 150);
 
@@ -94,7 +159,6 @@ export class AgentRunner {
         throw new Error('No target field');
       }
 
-      // Fuzzy match: exact first, then partial
       let targetPlayer = players.find((p) => p.name.toLowerCase() === targetName.toLowerCase());
       if (!targetPlayer) {
         targetPlayer = players.find((p) => p.name.toLowerCase().includes(targetName.toLowerCase()));
@@ -105,15 +169,16 @@ export class AgentRunner {
         action,
         targetId: targetPlayer?.id || players.filter((p) => p.isAlive && p.id !== agent.id)[0]?.id || '',
         reasoning: parsed.reasoning || '',
+        stateUpdates: parseStateUpdates(response, players),
       };
     } catch {
-      // Fallback: random alive player
       const aliveOthers = players.filter((p) => p.isAlive && p.id !== agent.id);
       return {
         playerId: agent.id,
         action,
         targetId: aliveOthers[Math.floor(Math.random() * aliveOthers.length)]?.id || '',
-        reasoning: 'Random fallback selection.',
+        reasoning: 'Random fallback.',
+        stateUpdates: null,
       };
     }
   }
@@ -122,83 +187,52 @@ export class AgentRunner {
     agent: AgentState,
     events: GameEvent[],
     players: Player[],
-  ): Promise<{ targetId: string; confidence: number }> {
+  ): Promise<{ targetId: string; confidence: number; reasoning: string; stateUpdates: AgentStateDiff | null }> {
     const prompt = buildVotePrompt(agent, events, players);
-    const response = await this.callLLMWithRetry(prompt, 100);
+    const response = await this.callLLMWithRetry(prompt, 150);
 
     try {
       const parsed = JSON.parse(response.replace(/^[^{]*/, '').replace(/[^}]*$/, ''));
-      
-      // Handle explicit abstain
+
       if (parsed.vote?.toLowerCase() === 'abstain') {
-        return { targetId: 'abstain', confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.5 };
+        return {
+          targetId: 'abstain',
+          confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.5,
+          reasoning: parsed.reasoning || 'Abstaining.',
+          stateUpdates: parseStateUpdates(response, players),
+        };
       }
 
-      // Try multiple possible keys the LLM might use
-      const voteName = parsed.vote || parsed.target || parsed.choice || parsed.eliminate || parsed.player;
+      const voteName = parsed.vote || parsed.target || parsed.choice;
       if (!voteName || typeof voteName !== 'string') {
-        throw new Error('No valid vote field found');
+        throw new Error('No vote field');
       }
 
-      // Fuzzy match: exact first, then partial case-insensitive
-      let targetPlayer = players.find((p) => p.name.toLowerCase() === voteName.toLowerCase());
+      let targetPlayer = players.find(p => p.name.toLowerCase() === voteName.toLowerCase());
       if (!targetPlayer) {
-        targetPlayer = players.find((p) => p.name.toLowerCase().includes(voteName.toLowerCase()));
+        targetPlayer = players.find(p => p.name.toLowerCase().includes(voteName.toLowerCase()));
       }
 
       return {
         targetId: targetPlayer?.id || '',
         confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.5,
+        reasoning: parsed.reasoning || 'Voting based on suspicion.',
+        stateUpdates: parseStateUpdates(response, players),
       };
     } catch {
-      // Fallback: vote for most suspicious player, or abstain if no suspicions
+      // Fallback: most suspicious from current beliefs
       let mostSuspicious = '';
       let highestScore = -1;
-      Object.entries(agent.suspicions).forEach(([id, score]) => {
-        if (score > highestScore) {
-          highestScore = score;
+      Object.entries(agent.beliefs.players).forEach(([id, entry]) => {
+        if (entry.suspicion > highestScore) {
+          highestScore = entry.suspicion;
           mostSuspicious = id;
         }
       });
-      // If no suspicions, abstain
       if (!mostSuspicious) {
-        return { targetId: 'abstain', confidence: 0.3 };
+        return { targetId: 'abstain', confidence: 0.3, reasoning: 'No suspicions yet.', stateUpdates: null };
       }
-      return { targetId: mostSuspicious, confidence: 0.3 };
+      return { targetId: mostSuspicious, confidence: 0.3, reasoning: 'Falling back to highest suspicion.', stateUpdates: null };
     }
-  }
-
-  async updateSuspicions(
-    agent: AgentState,
-    newEvents: GameEvent[],
-    players: Player[],
-  ): Promise<Record<string, number>> {
-    const prompt = `You are ${agent.name}. Update your suspicion scores based on recent events.
-Your current suspicions: ${JSON.stringify(agent.suspicions)}
-Recent events: ${newEvents.map((e) => e.content).join('\n')}
-
-Respond with ONLY a JSON object mapping player names to suspicion scores (0-1).
-Example: {"Viktor": 0.8, "Luna": 0.2}`;
-
-    const response = await this.callLLMWithRetry(prompt, 100);
-    const newSuspicions = { ...agent.suspicions };
-
-    try {
-      const parsed = JSON.parse(response.replace(/^[^{]*/, '').replace(/[^}]*$/, ''));
-      Object.entries(parsed).forEach(([name, score]) => {
-        // Fuzzy match player names
-        let player = players.find((p) => p.name.toLowerCase() === name.toLowerCase());
-        if (!player) {
-          player = players.find((p) => p.name.toLowerCase().includes(name.toLowerCase()));
-        }
-        if (player && typeof score === 'number') {
-          newSuspicions[player.id] = Math.max(0, Math.min(1, score));
-        }
-      });
-    } catch {
-      // Keep existing suspicions if parsing fails
-    }
-
-    return newSuspicions;
   }
 }
