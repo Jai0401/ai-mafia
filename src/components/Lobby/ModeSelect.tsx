@@ -31,29 +31,29 @@ export default function ModeSelect({ onModeSelect }: Props) {
   ];
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-8">
-      <h1 className="font-display text-4xl font-bold text-accent-amber mb-8">
+    <div className="flex flex-col items-center justify-center min-h-screen p-8 bg-[#131313] text-[#e2e2e2] font-pixel">
+      <h1 className="text-3xl font-bold text-[#e8a84c] mb-8 uppercase tracking-tighter">
         Choose Your Mode
       </h1>
 
-      <div className="grid gap-4 max-w-lg w-full">
+      <div className="grid gap-3 max-w-lg w-full">
         {modes.map((mode) => (
           <button
             key={mode.id}
             onClick={() => setSelectedMode(mode.id)}
-            className={`p-6 rounded-lg border-2 text-left transition-all ${
+            className={`p-5 border text-left transition-all ${
               selectedMode === mode.id
-                ? 'border-accent-amber bg-accent-amber/10'
-                : 'border-text-muted/20 bg-bg-room hover:border-text-muted/40'
+                ? 'border-[#e8a84c] bg-[#e8a84c]/10'
+                : 'border-[#353535] bg-[#1b1b1b] hover:border-[#555]'
             }`}
           >
             <div className="flex items-start gap-4">
-              <span className="text-3xl">{mode.icon}</span>
+              <span className="text-2xl">{mode.icon}</span>
               <div>
-                <h3 className="font-display text-lg text-text-primary font-semibold">
+                <h3 className="text-lg text-[#e2e2e2] font-bold">
                   {mode.title}
                 </h3>
-                <p className="text-text-muted text-sm mt-1">{mode.description}</p>
+                <p className="text-[#7a7d8a] text-sm mt-1">{mode.description}</p>
               </div>
             </div>
           </button>
@@ -62,7 +62,7 @@ export default function ModeSelect({ onModeSelect }: Props) {
 
       <button
         onClick={() => onModeSelect(selectedMode)}
-        className="mt-8 bg-accent-amber text-bg-deep font-display font-semibold px-8 py-3 rounded hover:bg-accent-amber/90 transition-colors"
+        className="mt-8 bg-[#e8a84c] text-[#131313] font-bold px-8 py-3 hover:bg-[#e8a84c]/90 transition-colors uppercase text-xs tracking-wider"
       >
         Continue
       </button>

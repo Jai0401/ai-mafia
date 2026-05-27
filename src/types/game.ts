@@ -13,6 +13,7 @@ export interface Player {
   isHuman: boolean;
   color: string;
   hat: HatType;
+  avatar: string; // path to 8-bit character image
   position: { x: number; y: number };
   targetPosition: { x: number; y: number };
 }

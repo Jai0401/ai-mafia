@@ -15,52 +15,52 @@ export default function PhaseBar({ phase, round, speed, isPaused, onSpeedChange,
   const isNight = phase === 'night';
 
   return (
-    <div className="flex items-center justify-between px-6 py-3 bg-bg-room border-b-2 border-accent-amber/50">
+    <div className="flex items-center justify-between px-4 py-2 bg-[#1b1b1b] border-b-2 border-[#353535] font-pixel">
       <div className="flex items-center gap-3">
         <motion.div
           animate={{ rotate: isNight ? 0 : 180 }}
           transition={{ duration: 1.5 }}
-          className="text-2xl"
+          className="text-xl"
         >
-          {isNight ? '🌙' : '☀️'}
+          {isNight ? '☾' : '☀'}
         </motion.div>
         <div>
-          <h2 className="font-display text-lg font-bold text-text-primary">
-            {isNight ? 'NIGHT' : 'DAY'}
+          <h2 className="text-sm font-bold text-[#e2e2e2] uppercase tracking-wider">
+            {isNight ? 'Night' : 'Day'}
           </h2>
-          <p className="text-text-muted text-xs">Round {round}</p>
+          <p className="text-[#7a7d8a] text-[10px] uppercase tracking-widest">Round {round}</p>
         </div>
       </div>
 
-      <div className="text-text-muted text-sm font-body">
+      <div className="text-[#7a7d8a] text-[11px]">
         {phase === 'night' && 'The town sleeps uneasily...'}
         {phase === 'day_discussion' && 'Discussion phase'}
         {phase === 'day_vote' && 'Voting phase'}
         {phase === 'game_over' && 'Game Over'}
       </div>
 
-      <div className="flex items-center gap-3">
-        <div className="flex gap-1">
+      <div className="flex items-center gap-2">
+        <div className="flex gap-0.5">
           {[1, 2, 4].map((s) => (
             <button
               key={s}
               onClick={() => onSpeedChange(s as 1 | 2 | 4)}
-              className={`px-2 py-1 rounded text-xs font-mono transition-colors ${
+              className={`px-2 py-1 text-[10px] font-bold transition-colors border ${
                 speed === s
-                  ? 'bg-accent-amber text-bg-deep'
-                  : 'bg-bg-deep text-text-muted hover:text-text-primary'
+                  ? 'bg-[#e8a84c] text-[#131313] border-[#e8a84c]'
+                  : 'bg-[#131313] text-[#7a7d8a] border-[#353535] hover:text-[#e2e2e2]'
               }`}
             >
-              {s}×
+              {s}x
             </button>
           ))}
         </div>
 
         <button
           onClick={onPauseToggle}
-          className="px-3 py-1 rounded text-sm bg-bg-deep text-text-primary hover:bg-bg-deep/80 transition-colors"
+          className="px-3 py-1 text-xs bg-[#131313] border border-[#353535] text-[#e2e2e2] hover:border-[#555] transition-colors"
         >
-          {isPaused ? '▶️' : '⏸️'}
+          {isPaused ? '▶' : '⏸'}
         </button>
       </div>
     </div>

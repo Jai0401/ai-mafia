@@ -31,3 +31,14 @@ export const hatTypes: HatType[] = [
   'crown',
   'cap',
 ];
+
+export const characterAvatars: string[] = [
+  '/images/characters/veteran.png',
+  '/images/characters/quiet_one.png',
+  '/images/characters/optimist.png',
+  '/images/characters/mysterious.png',
+  '/images/characters/eccentric.png',
+  '/images/characters/professional.png',
+  '/images/characters/dreamer.png',
+  '/images/characters/rebel.png',
+];

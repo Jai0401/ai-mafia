@@ -27,64 +27,64 @@ export default function GameConfig({ mode, onNext }: Props) {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-8">
-      <h1 className="font-display text-4xl font-bold text-accent-amber mb-8">
+    <div className="flex flex-col items-center justify-center min-h-screen p-8 bg-[#131313] text-[#e2e2e2] font-pixel">
+      <h1 className="text-3xl font-bold text-[#e8a84c] mb-8 uppercase tracking-tighter">
         Game Setup
       </h1>
 
       {/* Player Count */}
-      <div className="bg-bg-room rounded-lg p-6 max-w-md w-full border border-text-muted/20 mb-6">
-        <h2 className="font-display text-lg text-text-primary mb-4">
-          Player Count
+      <div className="bg-[#1b1b1b] border border-[#353535] p-5 max-w-md w-full mb-5">
+        <h2 className="text-sm text-[#e2e2e2] mb-3 uppercase tracking-wider font-bold">
+          Agent Count
         </h2>
-        <div className="flex gap-3">
+        <div className="flex gap-2">
           {[6, 8, 10].map((count) => (
             <button
               key={count}
               onClick={() => setPlayerCount(count)}
-              className={`flex-1 p-3 rounded border text-center transition-all ${
+              className={`flex-1 p-3 border text-center transition-all ${
                 playerCount === count
-                  ? 'border-accent-amber bg-accent-amber/10'
-                  : 'border-text-muted/20 hover:border-text-muted/40'
+                  ? 'border-[#e8a84c] bg-[#e8a84c]/10'
+                  : 'border-[#353535] hover:border-[#555]'
               }`}
             >
-              <div className="font-display text-xl font-bold text-text-primary">{count}</div>
-              <div className="text-text-muted text-xs mt-1">Players</div>
+              <div className="text-xl font-bold text-[#e2e2e2]">{count}</div>
+              <div className="text-[#7a7d8a] text-[10px] mt-1 uppercase">Agents</div>
             </button>
           ))}
         </div>
-        <p className="text-text-muted text-xs mt-3 text-center">
+        <p className="text-[#7a7d8a] text-[10px] mt-2 text-center uppercase tracking-wider">
           {getRoleDistribution(playerCount)}
         </p>
       </div>
 
       {mode === 'player' && (
-        <div className="bg-bg-room rounded-lg p-6 max-w-md w-full border border-text-muted/20 mb-6">
-          <h2 className="font-display text-lg text-text-primary mb-4">
+        <div className="bg-[#1b1b1b] border border-[#353535] p-5 max-w-md w-full mb-5">
+          <h2 className="text-sm text-[#e2e2e2] mb-3 uppercase tracking-wider font-bold">
             Preferred Role
           </h2>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {roles.map((role) => (
               <button
                 key={role.id}
                 onClick={() => setRolePreference(role.id)}
-                className={`w-full p-3 rounded border text-left transition-all ${
+                className={`w-full p-2.5 border text-left transition-all ${
                   rolePreference === role.id
-                    ? 'border-accent-amber bg-accent-amber/10'
-                    : 'border-text-muted/20 hover:border-text-muted/40'
+                    ? 'border-[#e8a84c] bg-[#e8a84c]/10'
+                    : 'border-[#353535] hover:border-[#555]'
                 }`}
               >
-                <div className="font-body text-text-primary font-semibold">{role.label}</div>
-                <div className="text-text-muted text-xs">{role.description}</div>
+                <div className="text-[#e2e2e2] text-sm font-bold">{role.label}</div>
+                <div className="text-[#7a7d8a] text-[10px]">{role.description}</div>
               </button>
             ))}
           </div>
         </div>
       )}
 
-      <div className="bg-bg-room rounded-lg p-6 max-w-md w-full border border-text-muted/20 mb-8">
-        <h2 className="font-display text-lg text-text-primary mb-2">Game Rules</h2>
-        <ul className="text-text-muted text-sm space-y-1 list-disc list-inside">
+      <div className="bg-[#1b1b1b] border border-[#353535] p-5 max-w-md w-full mb-8">
+        <h2 className="text-sm text-[#e2e2e2] mb-2 uppercase tracking-wider font-bold">Mission Rules</h2>
+        <ul className="text-[#7a7d8a] text-xs space-y-1 list-disc list-inside">
           <li>{getRoleDistribution(playerCount)}</li>
           <li>Night: Mafia kills, Detective investigates, Doctor protects</li>
           <li>Day: Discussion, accusation, vote to eliminate</li>
@@ -95,9 +95,9 @@ export default function GameConfig({ mode, onNext }: Props) {
 
       <button
         onClick={() => onNext(playerCount, rolePreference === 'random' ? undefined : rolePreference)}
-        className="bg-accent-amber text-bg-deep font-display font-semibold px-8 py-3 rounded hover:bg-accent-amber/90 transition-colors"
+        className="bg-[#e8a84c] text-[#131313] font-bold px-8 py-3 hover:bg-[#e8a84c]/90 transition-colors uppercase text-xs tracking-wider"
       >
-        Configure Characters →
+        Configure Agents →
       </button>
     </div>
   );

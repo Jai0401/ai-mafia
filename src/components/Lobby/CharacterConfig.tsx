@@ -1,7 +1,7 @@
 // src/components/Lobby/CharacterConfig.tsx
 import { useState } from 'react';
 import type { Player, Role, HatType } from '../../types/game';
-import { agentNames, characterColors, hatTypes } from '../../data/names';
+import { agentNames, characterColors, hatTypes, characterAvatars } from '../../data/names';
 import { personalities } from '../../data/personalities';
 
 interface Props {
@@ -21,6 +21,7 @@ function generatePlayers(count: number): Player[] {
   const shuffledColors = [...characterColors].sort(() => Math.random() - 0.5);
   const shuffledHats = [...hatTypes].sort(() => Math.random() - 0.5);
   const shuffledPersonalities = [...personalities].sort(() => Math.random() - 0.5);
+  const shuffledAvatars = [...characterAvatars].sort(() => Math.random() - 0.5);
   const roles = roleDistribution[count];
 
   return shuffledNames.map((name, i) => ({
@@ -32,6 +33,7 @@ function generatePlayers(count: number): Player[] {
     isHuman: false,
     color: shuffledColors[i % shuffledColors.length],
     hat: shuffledHats[i % shuffledHats.length] as HatType,
+    avatar: shuffledAvatars[i % shuffledAvatars.length],
     position: { x: 50, y: 50 },
     targetPosition: { x: 50, y: 50 },
   }));
@@ -40,15 +42,15 @@ function generatePlayers(count: number): Player[] {
 const roleColors: Record<Role, string> = {
   mafia: '#c0392b',
   detective: '#4a90d9',
-  doctor: '#2ecc71',
+  doctor: '#43e17a',
   civilian: '#7a7d8a',
 };
 
 const roleIcons: Record<Role, string> = {
-  mafia: '🗡️',
+  mafia: '⚔',
   detective: '🔍',
-  doctor: '💉',
-  civilian: '👤',
+  doctor: '+',
+  civilian: '○',
 };
 
 export default function CharacterConfig({ playerCount, onStart, onBack }: Props) {
@@ -64,7 +66,7 @@ export default function CharacterConfig({ playerCount, onStart, onBack }: Props)
     const allNames = [...agentNames, 'Nova', 'Atlas', 'Raven', 'Orion', 'Lyra', 'Cassius', 'Zara', 'Kael'];
     const usedNames = new Set(players.map(p => p.name));
     const availableName = allNames.find(n => !usedNames.has(n)) || `Agent-${players.length + 1}`;
-    
+
     const newPlayer: Player = {
       id: newId,
       name: availableName,
@@ -74,6 +76,7 @@ export default function CharacterConfig({ playerCount, onStart, onBack }: Props)
       isHuman: false,
       color: characterColors[players.length % characterColors.length],
       hat: hatTypes[players.length % hatTypes.length] as HatType,
+      avatar: characterAvatars[players.length % characterAvatars.length],
       position: { x: 50, y: 50 },
       targetPosition: { x: 50, y: 50 },
     };
@@ -98,12 +101,12 @@ export default function CharacterConfig({ playerCount, onStart, onBack }: Props)
     updatePlayer(id, 'role', nextRole);
   };
 
-  const cycleHat = (id: string) => {
+  const cycleAvatar = (id: string) => {
     const player = players.find(p => p.id === id);
     if (!player) return;
-    const currentIndex = hatTypes.indexOf(player.hat);
-    const nextHat = hatTypes[(currentIndex + 1) % hatTypes.length];
-    updatePlayer(id, 'hat', nextHat);
+    const currentIndex = characterAvatars.indexOf(player.avatar);
+    const nextAvatar = characterAvatars[(currentIndex + 1) % characterAvatars.length];
+    updatePlayer(id, 'avatar', nextAvatar);
   };
 
   const cycleColor = (id: string) => {
@@ -123,60 +126,58 @@ export default function CharacterConfig({ playerCount, onStart, onBack }: Props)
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-8">
-      <h1 className="font-display text-4xl font-bold text-accent-amber mb-2">
-        Configure Characters
+    <div className="flex flex-col items-center justify-center min-h-screen p-8 bg-[#131313] text-[#e2e2e2] font-pixel">
+      <h1 className="text-3xl font-bold text-[#e8a84c] mb-2 uppercase tracking-tighter">
+        Configure Agents
       </h1>
-      <p className="text-text-muted mb-6">
+      <p className="text-[#7a7d8a] mb-6 text-sm">
         Customize each agent before the game starts
       </p>
 
       <div className="flex gap-3 mb-6">
         <button
           onClick={randomizeAll}
-          className="px-4 py-2 bg-bg-room border border-accent-amber/30 rounded text-accent-amber hover:bg-accent-amber/10 transition-colors"
+          className="px-4 py-2 bg-[#1b1b1b] border border-[#e8a84c]/30 text-[#e8a84c] hover:bg-[#e8a84c]/10 transition-colors text-xs uppercase font-bold"
         >
           🎲 Randomize All
         </button>
         <button
           onClick={addPlayer}
           disabled={players.length >= 12}
-          className="px-4 py-2 bg-bg-room border border-green-400/30 rounded text-green-400 hover:bg-green-400/10 transition-colors disabled:opacity-30"
+          className="px-4 py-2 bg-[#1b1b1b] border border-[#43e17a]/30 text-[#43e17a] hover:bg-[#43e17a]/10 transition-colors disabled:opacity-30 text-xs uppercase font-bold"
         >
-          ➕ Add Player ({players.length}/12)
+          + Add Agent ({players.length}/12)
         </button>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-w-4xl w-full mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-w-4xl w-full mb-8">
         {players.map((player) => (
           <div
             key={player.id}
-            className="bg-bg-room rounded-lg border border-text-muted/20 p-4 relative group hover:border-accent-amber/40 transition-colors"
+            className="bg-[#1b1b1b] border border-[#353535] p-3 relative group hover:border-[#e8a84c]/40 transition-colors"
           >
             {/* Remove button */}
             {players.length > 4 && (
               <button
                 onClick={() => removePlayer(player.id)}
-                className="absolute -top-2 -right-2 w-6 h-6 bg-accent-red rounded-full text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                className="absolute -top-2 -right-2 w-6 h-6 bg-[#c0392b] text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center border border-[#131313]"
               >
                 ✕
               </button>
             )}
 
             {/* Character preview */}
-            <div className="flex justify-center mb-3">
-              <svg width="48" height="56" viewBox="0 0 64 72">
-                <ellipse cx="32" cy="68" rx="16" ry="3" fill="rgba(0,0,0,0.3)" />
-                <rect x="14" y="24" width="36" height="32" rx="14" fill={player.color} />
-                <rect x="24" y="30" width="22" height="12" rx="6" fill="#1a1a2e" />
-                <rect x="26" y="32" width="18" height="8" rx="4" fill="#16213e" />
-                <ellipse cx="40" cy="36" rx="3" ry="2" fill="rgba(255,255,255,0.4)" />
-                <rect x="22" y="52" width="8" height="10" rx="3" fill={player.color} />
-                <rect x="34" y="52" width="8" height="10" rx="3" fill={player.color} />
-                {/* Hat indicator */}
-                <circle cx="48" cy="18" r="8" fill={player.color} opacity="0.6" />
-                <text x="48" y="22" textAnchor="middle" fontSize="10">{player.hat === 'duck' ? '🦆' : player.hat === 'tophat' ? '🎩' : player.hat === 'bowler' ? '🎯' : player.hat === 'beret' ? '🎨' : player.hat === 'crown' ? '👑' : '🧢'}</text>
-              </svg>
+            <div className="flex justify-center mb-2">
+              <div
+                className="w-16 h-16 bg-[#131313] border-2 border-[#353535] relative cursor-pointer hover:border-[#e8a84c] transition-colors"
+                onClick={() => cycleAvatar(player.id)}
+              >
+                <img
+                  src={player.avatar}
+                  alt=""
+                  className="w-full h-full object-contain pixelated"
+                />
+              </div>
             </div>
 
             {/* Editable name */}
@@ -184,62 +185,54 @@ export default function CharacterConfig({ playerCount, onStart, onBack }: Props)
               type="text"
               value={player.name}
               onChange={(e) => updatePlayer(player.id, 'name', e.target.value)}
-              className="w-full bg-bg-deep border border-text-muted/20 rounded px-2 py-1 text-sm text-text-primary text-center font-display mb-2 focus:outline-none focus:border-accent-amber"
+              className="w-full bg-[#131313] border border-[#353535] px-2 py-1 text-xs text-[#e2e2e2] text-center font-bold mb-2 focus:outline-none focus:border-[#e8a84c] uppercase tracking-wider"
             />
 
             {/* Role selector */}
             <button
               onClick={() => cycleRole(player.id)}
-              className="w-full flex items-center justify-center gap-1 px-2 py-1 rounded text-xs font-bold mb-2 transition-colors"
-              style={{ 
+              className="w-full flex items-center justify-center gap-1 px-2 py-1 text-[10px] font-bold mb-1.5 uppercase tracking-wider transition-colors border"
+              style={{
                 backgroundColor: roleColors[player.role] + '20',
                 color: roleColors[player.role],
-                border: `1px solid ${roleColors[player.role]}40`
+                borderColor: roleColors[player.role] + '40',
               }}
             >
-              {roleIcons[player.role]} {player.role.toUpperCase()}
+              {roleIcons[player.role]} {player.role}
             </button>
 
             {/* Personality selector */}
             <button
               onClick={() => cyclePersonality(player.id)}
-              className="w-full text-xs text-text-muted hover:text-text-primary py-1 transition-colors"
+              className="w-full text-[10px] text-[#7a7d8a] hover:text-[#e2e2e2] py-0.5 transition-colors"
             >
               {player.personality}
             </button>
 
-            {/* Color and Hat toggles */}
-            <div className="flex gap-2 mt-2">
-              <button
-                onClick={() => cycleColor(player.id)}
-                className="flex-1 py-1 rounded text-xs bg-bg-deep border border-text-muted/20 hover:border-text-muted/40 transition-colors"
-                style={{ color: player.color }}
-              >
-                ● Color
-              </button>
-              <button
-                onClick={() => cycleHat(player.id)}
-                className="flex-1 py-1 rounded text-xs bg-bg-deep border border-text-muted/20 hover:border-text-muted/40 transition-colors text-text-muted"
-              >
-                🎩 Hat
-              </button>
-            </div>
+            {/* Color toggle */}
+            <button
+              onClick={() => cycleColor(player.id)}
+              className="w-full py-0.5 text-[10px] bg-[#131313] border border-[#353535] hover:border-[#555] transition-colors mt-1.5"
+              style={{ color: player.color }}
+            >
+              ● Color
+            </button>
           </div>
         ))}
       </div>
 
-      <div className="flex gap-4">
+      <div className="flex gap-3">
         <button
           onClick={onBack}
-          className="px-6 py-2 rounded border border-text-muted/30 text-text-muted hover:text-text-primary transition-colors"
+          className="px-6 py-2 border border-[#353535] text-[#7a7d8a] hover:text-[#e2e2e2] hover:border-[#555] transition-colors text-xs uppercase font-bold"
         >
           Back
         </button>
         <button
           onClick={() => onStart(players)}
-          className="px-8 py-2 rounded bg-accent-amber text-bg-deep font-display font-semibold hover:bg-accent-amber/90 transition-colors"
+          className="px-8 py-2 bg-[#e8a84c] text-[#131313] font-bold hover:bg-[#e8a84c]/90 transition-colors text-xs uppercase"
         >
-          Start Game ({players.length} Players)
+          Start Game ({players.length} Agents)
         </button>
       </div>
     </div>

@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Crimson+Pro:wght@400;600&family=Courier+Prime:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Crimson+Pro:wght@400;600&family=Courier+Prime:wght@400;700&family=Space+Mono:wght@400;700&display=swap');
 
 @theme {
   --color-bg-deep: #0d0f14;
@@ -10,15 +10,15 @@
   --color-accent-blue: #4a90d9;
   --color-text-primary: #e8e6df;
   --color-text-muted: #7a7d8a;
-  --font-display: 'Playfair Display', serif;
+  --font-display: 'Space Mono', monospace;
   --font-mono: 'Courier Prime', monospace;
   --font-body: 'Crimson Pro', serif;
 }
 
 body {
-  background-color: var(--color-bg-deep);
-  color: var(--color-text-primary);
-  font-family: var(--font-body);
+  background-color: #131313;
+  color: #e2e2e2;
+  font-family: 'Crimson Pro', serif;
   margin: 0;
   padding: 0;
   overflow: hidden;
@@ -27,6 +27,84 @@ body {
 #root {
   width: 100vw;
   height: 100vh;
+}
+
+/* 8-BIT RETRO DESIGN SYSTEM */
+
+.font-pixel {
+  font-family: 'Space Mono', monospace;
+}
+
+/* Pixel-perfect image rendering */
+.pixelated {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+/* Plinth shadow — offset hard shadow for 3D effect */
+.plinth-shadow {
+  box-shadow: 4px 4px 0px 0px rgba(0,0,0,1);
+  border-top: 2px solid rgba(255,255,255,0.2);
+  border-left: 2px solid rgba(255,255,255,0.2);
+  border-right: 2px solid rgba(0,0,0,0.6);
+  border-bottom: 2px solid rgba(0,0,0,0.6);
+}
+
+/* Active/pressed state — button sinks */
+.plinth-pressed {
+  box-shadow: none;
+  transform: translate(2px, 2px);
+  border-top: 2px solid rgba(0,0,0,0.6);
+  border-left: 2px solid rgba(0,0,0,0.6);
+  border-right: 2px solid rgba(255,255,255,0.2);
+  border-bottom: 2px solid rgba(255,255,255,0.2);
+}
+
+/* Dithered checkerboard background */
+.dither-bg {
+  background-image:
+    linear-gradient(45deg, rgba(0,0,0,0.2) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.2) 75%, rgba(0,0,0,0.2)),
+    linear-gradient(45deg, rgba(0,0,0,0.2) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.2) 75%, rgba(0,0,0,0.2));
+  background-size: 4px 4px;
+  background-position: 0 0, 2px 2px;
+}
+
+/* Grid background for lab screens */
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* Scanline effect */
+.scanlines {
+  background: linear-gradient(
+    to bottom,
+    rgba(255,255,255,0),
+    rgba(255,255,255,0) 50%,
+    rgba(0,0,0,0.1) 50%,
+    rgba(0,0,0,0.1)
+  );
+  background-size: 100% 4px;
+  pointer-events: none;
+}
+
+/* 8-bit pixel border glow */
+.pixel-glow-green {
+  box-shadow: 0 0 0 2px #43e17a, 0 0 0 4px rgba(67,225,122,0.3);
+}
+
+/* Segmented progress bar blocks */
+.segment-bar {
+  display: flex;
+  gap: 2px;
+}
+
+.segment-bar > div {
+  height: 100%;
+  flex: 1;
 }
 
 /* Film grain overlay */

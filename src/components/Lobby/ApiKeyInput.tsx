@@ -37,16 +37,16 @@ export default function ApiKeyInput({ onKeySubmit }: Props) {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-8">
-      <h1 className="font-display text-5xl font-bold text-accent-amber mb-2">
+    <div className="flex flex-col items-center justify-center min-h-screen p-8 bg-[#131313] text-[#e2e2e2] font-pixel">
+      <h1 className="text-4xl font-bold text-[#e8a84c] mb-2 uppercase tracking-tighter">
         AI Mafia
       </h1>
-      <p className="text-text-muted mb-8 font-body text-lg">
+      <p className="text-[#7a7d8a] mb-8 text-lg">
         A fully AI-driven social deduction game
       </p>
 
-      <div className="bg-bg-room rounded-lg p-8 max-w-md w-full border border-text-muted/20">
-        <h2 className="font-display text-xl text-text-primary mb-4">
+      <div className="bg-[#1b1b1b] border border-[#353535] p-8 max-w-md w-full">
+        <h2 className="text-lg text-[#e2e2e2] mb-4 uppercase tracking-wider font-bold">
           Enter OpenRouter API Key
         </h2>
         <input
@@ -54,25 +54,25 @@ export default function ApiKeyInput({ onKeySubmit }: Props) {
           value={apiKey}
           onChange={(e) => setApiKey(e.target.value)}
           placeholder="sk-or-v1-..."
-          className="w-full bg-bg-deep border border-text-muted/30 rounded px-4 py-3 text-text-primary font-mono text-sm mb-4 focus:outline-none focus:border-accent-amber"
+          className="w-full bg-[#131313] border border-[#353535] px-4 py-3 text-[#e2e2e2] font-mono text-sm mb-4 focus:outline-none focus:border-[#e8a84c]"
         />
         {error && (
-          <p className="text-accent-red text-sm mb-4">{error}</p>
+          <p className="text-[#c0392b] text-sm mb-4">{error}</p>
         )}
         <button
           onClick={validateKey}
           disabled={isValidating}
-          className="w-full bg-accent-amber text-bg-deep font-display font-semibold py-3 rounded hover:bg-accent-amber/90 transition-colors disabled:opacity-50"
+          className="w-full bg-[#e8a84c] text-[#131313] font-bold py-3 hover:bg-[#e8a84c]/90 transition-colors disabled:opacity-50 uppercase text-xs tracking-wider"
         >
           {isValidating ? 'Validating...' : 'Continue'}
         </button>
-        <p className="text-text-muted text-xs mt-4 text-center">
+        <p className="text-[#7a7d8a] text-xs mt-4 text-center">
           Get a free key at{' '}
           <a
             href="https://openrouter.ai/keys"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-accent-amber hover:underline"
+            className="text-[#e8a84c] hover:underline"
           >
             openrouter.ai
           </a>

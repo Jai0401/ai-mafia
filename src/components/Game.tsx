@@ -165,7 +165,7 @@ export default function Game({ apiKey, humanMode, rolePreference, preConfiguredP
   const isNight = state.phase === 'night';
 
   return (
-    <div className="h-screen flex flex-col bg-bg-deep">
+    <div className="h-screen flex flex-col bg-[#131313] font-pixel">
       <PhaseBar phase={state.phase} round={state.round} speed={state.speed} isPaused={state.isPaused} onSpeedChange={handleSpeedChange} onPauseToggle={handlePauseToggle} />
 
       <div className="flex-1 flex overflow-hidden">
@@ -176,17 +176,17 @@ export default function Game({ apiKey, humanMode, rolePreference, preConfiguredP
           <Room room={activeRoom} isLit={!isNight}>
             {/* Night actions indicator */}
             {isNight && (
-              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 bg-bg-room/90 border border-accent-amber/30 rounded-lg px-6 py-3 text-center">
-                <h3 className="font-display text-accent-amber text-sm mb-2">Night Actions in Progress</h3>
-                <div className="flex gap-4 text-xs text-text-muted">
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 bg-[#1b1b1b]/90 border border-[#e8a84c]/30 px-6 py-3 text-center">
+                <h3 className="text-[#e8a84c] text-xs mb-2 uppercase tracking-widest font-bold">Night Actions in Progress</h3>
+                <div className="flex gap-4 text-[10px] text-[#7a7d8a]">
                   {state.players.filter(p => p.isAlive && p.role === 'mafia').map(p => (
-                    <span key={p.id} className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-accent-red" /> {p.name} choosing target...</span>
+                    <span key={p.id} className="flex items-center gap-1"><span className="w-2 h-2 bg-[#c0392b]" /> {p.name} choosing...</span>
                   ))}
                   {state.players.filter(p => p.isAlive && p.role === 'detective').map(p => (
-                    <span key={p.id} className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-accent-blue" /> {p.name} investigating...</span>
+                    <span key={p.id} className="flex items-center gap-1"><span className="w-2 h-2 bg-[#4a90d9]" /> {p.name} investigating...</span>
                   ))}
                   {state.players.filter(p => p.isAlive && p.role === 'doctor').map(p => (
-                    <span key={p.id} className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-400" /> {p.name} protecting...</span>
+                    <span key={p.id} className="flex items-center gap-1"><span className="w-2 h-2 bg-[#43e17a]" /> {p.name} protecting...</span>
                   ))}
                 </div>
               </div>
@@ -194,14 +194,14 @@ export default function Game({ apiKey, humanMode, rolePreference, preConfiguredP
 
             {/* Voting indicator */}
             {state.phase === 'day_vote' && (
-              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 bg-bg-room/90 border border-accent-amber/30 rounded-lg px-6 py-3 text-center">
-                <h3 className="font-display text-accent-amber text-sm mb-2">🗳️ Voting in Progress</h3>
-                <div className="flex gap-3 text-xs text-text-muted flex-wrap justify-center">
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 bg-[#1b1b1b]/90 border border-[#e8a84c]/30 px-6 py-3 text-center">
+                <h3 className="text-[#e8a84c] text-xs mb-2 uppercase tracking-widest font-bold">☐ Voting in Progress</h3>
+                <div className="flex gap-3 text-[10px] text-[#7a7d8a] flex-wrap justify-center">
                   {state.players.filter(p => p.isAlive).map(p => {
                     const hasVoted = state.votes[p.id] !== undefined;
                     return (
-                      <span key={p.id} className={`flex items-center gap-1 transition-colors ${hasVoted ? 'text-green-400' : 'text-text-muted'}`}>
-                        <span className={`w-2 h-2 rounded-full ${hasVoted ? 'bg-green-400' : 'bg-text-muted/40 animate-pulse'}`} />
+                      <span key={p.id} className={`flex items-center gap-1 transition-colors ${hasVoted ? 'text-[#43e17a]' : 'text-[#7a7d8a]'}`}>
+                        <span className={`w-2 h-2 ${hasVoted ? 'bg-[#43e17a]' : 'bg-[#7a7d8a]/40 animate-pulse'}`} />
                         {p.name} {hasVoted ? '✓' : '...'}
                       </span>
                     );
@@ -216,24 +216,27 @@ export default function Game({ apiKey, humanMode, rolePreference, preConfiguredP
                 initial={{ opacity: 0, y: 10, scale: 0.9 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="absolute top-4 left-1/2 -translate-x-1/2 z-50 max-w-lg shadow-2xl"
+                className="absolute top-4 left-1/2 -translate-x-1/2 z-50 max-w-lg shadow-[8px_8px_0px_0px_rgba(0,0,0,0.5)]"
               >
-                <div className="bg-white text-bg-deep rounded-2xl overflow-hidden">
+                <div className="bg-[#1b1b1b] border-2 border-white overflow-hidden">
                   <div
-                    className="px-4 py-2 flex items-center gap-2"
+                    className="px-4 py-2 flex items-center gap-2 border-b border-[#353535]"
                     style={{ backgroundColor: state.players.find(p => p.id === activeSpeech.playerId)?.color + '20' }}
                   >
-                    <div
-                      className="w-6 h-6 rounded-full border-2 border-white shadow"
-                      style={{ backgroundColor: state.players.find(p => p.id === activeSpeech.playerId)?.color }}
-                    />
-                    <span className="font-display font-bold text-sm" style={{ color: state.players.find(p => p.id === activeSpeech.playerId)?.color }}>
+                    <div className="w-6 h-6 bg-[#131313] border border-[#353535]">
+                      <img
+                        src={state.players.find(p => p.id === activeSpeech.playerId)?.avatar}
+                        alt=""
+                        className="w-full h-full object-contain pixelated"
+                      />
+                    </div>
+                    <span className="font-bold text-sm" style={{ color: state.players.find(p => p.id === activeSpeech.playerId)?.color }}>
                       {state.players.find(p => p.id === activeSpeech.playerId)?.name}
                     </span>
-                    <span className="text-xs text-text-muted ml-auto">💬 Speaking</span>
+                    <span className="text-[10px] text-[#7a7d8a] ml-auto uppercase tracking-wider">💬 Speaking</span>
                   </div>
                   <div className="px-4 py-3">
-                    <p className="font-body text-sm leading-relaxed text-bg-deep">{activeSpeech.text}</p>
+                    <p className="text-sm leading-relaxed text-[#e2e2e2]">{activeSpeech.text}</p>
                   </div>
                 </div>
                 <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-t-8 border-transparent border-t-white" />
@@ -275,29 +278,29 @@ export default function Game({ apiKey, humanMode, rolePreference, preConfiguredP
 
           {/* Game over overlay */}
           {state.phase === 'game_over' && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`absolute inset-0 flex items-center justify-center z-20 ${state.winner === 'mafia' ? 'bg-red-900/60' : 'bg-amber-900/40'}`}>
-              <div className="bg-bg-room rounded-lg border-2 border-accent-amber p-8 text-center">
-                <h2 className="font-display text-3xl font-bold text-accent-amber mb-4">{state.winner === 'mafia' ? 'Mafia Wins!' : 'Civilians Win!'}</h2>
-                <p className="text-text-muted mb-4">{state.winner === 'mafia' ? 'The Mafia has taken over the town.' : 'The town is safe... for now.'}</p>
-                <button onClick={() => window.location.reload()} className="bg-accent-amber text-bg-deep font-display font-semibold px-6 py-2 rounded hover:bg-accent-amber/90 transition-colors">Play Again</button>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`absolute inset-0 flex items-center justify-center z-20 ${state.winner === 'mafia' ? 'bg-[#c0392b]/30' : 'bg-[#e8a84c]/20'}`}>
+              <div className="bg-[#1b1b1b] border-2 border-[#e8a84c] p-8 text-center max-w-md">
+                <h2 className="text-3xl font-bold text-[#e8a84c] mb-4 uppercase tracking-tighter">{state.winner === 'mafia' ? 'Mafia Wins!' : 'Civilians Win!'}</h2>
+                <p className="text-[#7a7d8a] mb-6 text-sm">{state.winner === 'mafia' ? 'The Mafia has taken over the town.' : 'The town is safe... for now.'}</p>
+                <button onClick={() => window.location.reload()} className="bg-[#e8a84c] text-[#131313] font-bold px-6 py-2 hover:bg-[#e8a84c]/90 transition-colors uppercase text-xs tracking-wider">Play Again</button>
               </div>
             </motion.div>
           )}
         </div>
       </div>
 
-      <div className="h-48 p-4 pt-0 flex gap-4">
+      <div className="h-48 p-3 pt-0 flex gap-3">
         <div className="flex-1"><GameLog events={state.events} players={state.players} /></div>
         {humanMode === 'player' && state.humanPlayerId && (
-          <div className="w-64 bg-bg-room rounded-lg border border-text-muted/20 p-4 flex flex-col gap-2">
-            <h3 className="font-display text-xs text-accent-amber uppercase tracking-wider">Your Turn</h3>
-            <button onClick={handleHumanControlToggle} className={`py-2 px-3 rounded text-sm font-semibold transition-colors ${state.humanInControl ? 'bg-accent-amber text-bg-deep' : 'bg-bg-deep text-text-muted border border-text-muted/30'}`}>
+          <div className="w-64 bg-[#1b1b1b] border border-[#353535] p-3 flex flex-col gap-2">
+            <h3 className="text-[10px] text-[#e8a84c] uppercase tracking-widest font-bold">Your Turn</h3>
+            <button onClick={handleHumanControlToggle} className={`py-2 px-3 text-xs font-bold transition-colors border ${state.humanInControl ? 'bg-[#e8a84c] text-[#131313] border-[#e8a84c]' : 'bg-[#131313] text-[#7a7d8a] border-[#353535]'}`}>
               {state.humanInControl ? 'Take Control' : 'Auto Play'}
             </button>
             {state.humanInControl && state.phase === 'day_discussion' && (
               <div className="flex flex-col gap-2">
-                <textarea value={speechText} onChange={(e) => setSpeechText(e.target.value)} placeholder="What do you want to say?" className="bg-bg-deep border border-text-muted/30 rounded p-2 text-sm text-text-primary resize-none h-16 focus:outline-none focus:border-accent-amber" />
-                <button onClick={handleSpeechSubmit} className="bg-accent-amber text-bg-deep font-display text-sm font-semibold py-1 rounded hover:bg-accent-amber/90 transition-colors">Speak</button>
+                <textarea value={speechText} onChange={(e) => setSpeechText(e.target.value)} placeholder="What do you want to say?" className="bg-[#131313] border border-[#353535] p-2 text-xs text-[#e2e2e2] resize-none h-16 focus:outline-none focus:border-[#e8a84c]" />
+                <button onClick={handleSpeechSubmit} className="bg-[#e8a84c] text-[#131313] text-xs font-bold py-1 hover:bg-[#e8a84c]/90 transition-colors uppercase tracking-wider">Speak</button>
               </div>
             )}
           </div>
@@ -307,13 +310,13 @@ export default function Game({ apiKey, humanMode, rolePreference, preConfiguredP
       <VoteModal isOpen={showVoteModal} title={voteAction === 'vote' ? 'Vote to Eliminate' : voteAction === 'kill' ? 'Choose Target' : voteAction === 'investigate' ? 'Investigate Player' : 'Protect Player'} players={state.players} excludePlayerId={state.humanPlayerId} onSelect={handleVoteSelect} onCancel={() => setShowVoteModal(false)} actionType={voteAction} />
 
       {showWhisperInput && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-bg-room rounded-lg border border-accent-amber/50 p-6 max-w-md w-full mx-4">
-            <h2 className="font-display text-xl text-text-primary mb-4">Whisper to {state.players.find((p) => p.id === whisperTarget)?.name}</h2>
-            <textarea value={whisperText} onChange={(e) => setWhisperText(e.target.value)} placeholder="What do you want to whisper?" className="w-full bg-bg-deep border border-text-muted/30 rounded p-3 text-text-primary resize-none h-24 mb-4 focus:outline-none focus:border-accent-amber" />
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="bg-[#1b1b1b] border-2 border-[#e8a84c] p-6 max-w-md w-full mx-4">
+            <h2 className="text-lg text-[#e2e2e2] mb-4 uppercase tracking-tighter font-bold">Whisper to {state.players.find((p) => p.id === whisperTarget)?.name}</h2>
+            <textarea value={whisperText} onChange={(e) => setWhisperText(e.target.value)} placeholder="What do you want to whisper?" className="w-full bg-[#131313] border border-[#353535] p-3 text-[#e2e2e2] resize-none h-24 mb-4 focus:outline-none focus:border-[#e8a84c]" />
             <div className="flex gap-3">
-              <button onClick={() => setShowWhisperInput(false)} className="flex-1 py-2 rounded border border-text-muted/30 text-text-muted">Cancel</button>
-              <button onClick={handleWhisperSubmit} className="flex-1 py-2 rounded bg-accent-amber text-bg-deep font-display font-semibold">Whisper</button>
+              <button onClick={() => setShowWhisperInput(false)} className="flex-1 py-2 border border-[#353535] text-[#7a7d8a] hover:text-[#e2e2e2] transition-colors text-xs uppercase font-bold">Cancel</button>
+              <button onClick={handleWhisperSubmit} className="flex-1 py-2 bg-[#e8a84c] text-[#131313] font-bold text-xs uppercase hover:bg-[#e8a84c]/90 transition-colors">Whisper</button>
             </div>
           </div>
         </div>

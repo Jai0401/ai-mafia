@@ -1,6 +1,6 @@
 // src/components/GameMap/Character.tsx
 import { motion } from 'framer-motion';
-import type { Player, HatType } from '../../types/game';
+import type { Player } from '../../types/game';
 
 interface Props {
   player: Player;
@@ -8,60 +8,6 @@ interface Props {
   isSpeaking: boolean;
   isThinking?: boolean;
   onClick?: () => void;
-}
-
-function getHatSVG(hat: HatType, _color: string): React.ReactNode {
-  switch (hat) {
-    case 'duck':
-      return (
-        <g transform="translate(14, -18)">
-          <ellipse cx="16" cy="10" rx="14" ry="9" fill="#f1c40f" />
-          <ellipse cx="16" cy="8" rx="10" ry="6" fill="#f39c12" />
-          <circle cx="26" cy="8" r="4" fill="#fff" />
-          <circle cx="27" cy="8" r="1.5" fill="#000" />
-          <path d="M28 6 L36 4 L30 10 Z" fill="#e67e22" />
-        </g>
-      );
-    case 'tophat':
-      return (
-        <g transform="translate(14, -22)">
-          <rect x="4" y="16" width="24" height="4" rx="1" fill="#2c3e50" />
-          <rect x="8" y="0" width="16" height="16" rx="1" fill="#2c3e50" />
-          <rect x="8" y="14" width="16" height="2" fill="#e8a84c" />
-        </g>
-      );
-    case 'bowler':
-      return (
-        <g transform="translate(14, -14)">
-          <ellipse cx="16" cy="10" rx="16" ry="8" fill="#5d4037" />
-          <rect x="6" y="6" width="20" height="6" rx="2" fill="#4e342e" />
-        </g>
-      );
-    case 'beret':
-      return (
-        <g transform="translate(14, -16)">
-          <ellipse cx="16" cy="10" rx="14" ry="7" fill="#c0392b" />
-          <rect x="4" y="8" width="24" height="4" rx="1" fill="#a93226" />
-          <circle cx="8" cy="10" r="2" fill="#a93226" />
-        </g>
-      );
-    case 'crown':
-      return (
-        <g transform="translate(14, -18)">
-          <path d="M4 14 L4 4 L10 10 L16 2 L22 10 L28 4 L28 14 Z" fill="#f1c40f" stroke="#d4ac0d" strokeWidth="1" />
-          <circle cx="10" cy="8" r="2" fill="#e74c3c" />
-          <circle cx="16" cy="5" r="2.5" fill="#3498db" />
-          <circle cx="22" cy="8" r="2" fill="#e74c3c" />
-        </g>
-      );
-    case 'cap':
-      return (
-        <g transform="translate(14, -14)">
-          <path d="M4 10 Q16 2 28 10 L28 12 Q16 6 4 12 Z" fill="#3498db" />
-          <rect x="24" y="10" width="10" height="3" rx="1" fill="#2980b9" />
-        </g>
-      );
-  }
 }
 
 export default function Character({ player, isRevealed, isSpeaking, isThinking, onClick }: Props) {
@@ -105,10 +51,10 @@ export default function Character({ player, isRevealed, isSpeaking, isThinking, 
           <motion.div
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="absolute -top-16 left-1/2 -translate-x-1/2 bg-white text-bg-deep px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap z-50 shadow-lg"
-            style={{ minWidth: '80px', textAlign: 'center' }}
+            className="absolute -top-20 left-1/2 -translate-x-1/2 bg-[#1b1b1b] border-2 border-white px-3 py-2 text-xs font-bold whitespace-nowrap z-50 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+            style={{ minWidth: '80px', textAlign: 'center', fontFamily: 'Space Mono, monospace' }}
           >
-            💬
+            <span className="text-[#43e17a]">💬</span>
             <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-t-8 border-transparent border-t-white" />
           </motion.div>
         )}
@@ -118,40 +64,40 @@ export default function Character({ player, isRevealed, isSpeaking, isThinking, 
           <motion.div
             initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
-            className="absolute -top-10 left-1/2 -translate-x-1/2 flex gap-1 z-50"
+            className="absolute -top-12 left-1/2 -translate-x-1/2 flex gap-1 z-50"
           >
             <motion.div
               animate={{ scale: [1, 1.3, 1] }}
               transition={{ repeat: Infinity, duration: 1, delay: 0 }}
-              className="w-2 h-2 rounded-full bg-accent-amber"
+              className="w-2 h-2 bg-[#e8a84c]"
             />
             <motion.div
               animate={{ scale: [1, 1.3, 1] }}
               transition={{ repeat: Infinity, duration: 1, delay: 0.2 }}
-              className="w-2 h-2 rounded-full bg-accent-amber"
+              className="w-2 h-2 bg-[#e8a84c]"
             />
             <motion.div
               animate={{ scale: [1, 1.3, 1] }}
               transition={{ repeat: Infinity, duration: 1, delay: 0.4 }}
-              className="w-2 h-2 rounded-full bg-accent-amber"
+              className="w-2 h-2 bg-[#e8a84c]"
             />
           </motion.div>
         )}
 
-        {/* Character SVG - Among Us style */}
+        {/* Character Sprite */}
         <div
           className="relative"
           style={{
-            opacity: isDead ? 0.35 : 1,
-            filter: isDead ? 'grayscale(80%) blur(0.3px)' : 'none',
+            opacity: isDead ? 0.4 : 1,
+            filter: isDead ? 'grayscale(100%) brightness(0.5)' : 'none',
           }}
         >
           {/* Mafia glow */}
           {(isRevealed && isMafia && !isDead) && (
             <div
-              className="absolute inset-0 rounded-full blur-xl"
+              className="absolute inset-0 blur-xl"
               style={{
-                backgroundColor: 'rgba(192, 57, 43, 0.5)',
+                backgroundColor: 'rgba(192, 57, 43, 0.4)',
                 transform: 'scale(2)',
                 zIndex: -1,
               }}
@@ -163,42 +109,43 @@ export default function Character({ player, isRevealed, isSpeaking, isThinking, 
             <motion.div
               animate={{ opacity: [0.3, 0.6, 0.3] }}
               transition={{ repeat: Infinity, duration: 1.5 }}
-              className="absolute inset-0 rounded-full blur-lg"
+              className="absolute inset-0 blur-lg"
               style={{
-                backgroundColor: player.color,
+                backgroundColor: '#43e17a',
                 transform: 'scale(1.8)',
                 zIndex: -1,
               }}
             />
           )}
 
-          <svg width="64" height="72" viewBox="0 0 64 72">
-            {/* Shadow */}
-            <ellipse cx="32" cy="68" rx="20" ry="4" fill="rgba(0,0,0,0.3)" />
-            
-            {/* Backpack */}
-            <rect x="8" y="24" width="10" height="28" rx="4" fill={player.color} opacity={isDead ? 0.5 : 0.9} />
-            
-            {/* Body (bean shape) */}
-            <rect x="16" y="16" width="32" height="44" rx="16" fill={player.color} opacity={isDead ? 0.5 : 1} />
-            
-            {/* Visor */}
-            <rect x="24" y="22" width="22" height="14" rx="7" fill={isDead ? '#0a0a14' : '#1a1a2e'} />
-            <rect x="26" y="24" width="18" height="10" rx="5" fill={isDead ? '#070712' : '#16213e'} />
-            <ellipse cx="40" cy="28" rx="3" ry="2" fill={isDead ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.4)'} />
-            
-            {/* Legs */}
-            <rect x="22" y="54" width="10" height="12" rx="4" fill={player.color} opacity={isDead ? 0.5 : 1} />
-            <rect x="34" y="54" width="10" height="12" rx="4" fill={player.color} opacity={isDead ? 0.5 : 1} />
-            
-            {/* Hat */}
-            {getHatSVG(player.hat, player.color)}
-          </svg>
+          {/* 8-bit character image */}
+          <div className="w-16 h-20 relative">
+            <img
+              src={player.avatar}
+              alt={player.name}
+              className="w-full h-full object-contain pixelated"
+              draggable={false}
+            />
+            {/* Role badge when revealed */}
+            {isRevealed && !isDead && (
+              <div
+                className="absolute -bottom-1 left-1/2 -translate-x-1/2 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider whitespace-nowrap border"
+                style={{
+                  backgroundColor: player.role === 'mafia' ? 'rgba(192,57,43,0.9)' : player.role === 'detective' ? 'rgba(74,144,217,0.9)' : player.role === 'doctor' ? 'rgba(46,204,113,0.9)' : 'rgba(122,125,138,0.9)',
+                  borderColor: player.role === 'mafia' ? '#c0392b' : player.role === 'detective' ? '#4a90d9' : player.role === 'doctor' ? '#2ecc71' : '#7a7d8a',
+                  color: '#fff',
+                  fontFamily: 'Space Mono, monospace',
+                }}
+              >
+                {player.role}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Name badge */}
         <span
-          className="text-xs font-display mt-1 whitespace-nowrap px-2 py-0.5 rounded-full bg-bg-deep/80"
+          className="text-xs font-pixel mt-1 whitespace-nowrap px-2 py-0.5 bg-[#131313]/80 border border-[#353535]"
           style={{
             color: player.color,
             textShadow: `0 0 6px ${player.color}80`,

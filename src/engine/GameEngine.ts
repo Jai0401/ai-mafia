@@ -4,7 +4,7 @@ import { AgentRunner } from './AgentRunner';
 import { resolveNightActions } from './ActionResolver';
 import { countVotes } from './VoteCounter';
 import { personalities } from '../data/personalities';
-import { agentNames, characterColors, hatTypes } from '../data/names';
+import { agentNames, characterColors, hatTypes, characterAvatars } from '../data/names';
 import { roomPositions } from '../data/roomLayout';
 
 export class GameEngine {
@@ -124,11 +124,12 @@ export class GameEngine {
   }
 
   initializeGame(humanMode?: HumanMode, humanRolePreference?: string): void {
-    // Shuffle and pick 6 names, colors, hats, personalities
+    // Shuffle and pick 6 names, colors, hats, personalities, avatars
     const shuffledNames = this.shuffle([...agentNames]).slice(0, 6);
     const shuffledColors = this.shuffle([...characterColors]);
     const shuffledHats = this.shuffle([...hatTypes]);
     const shuffledPersonalities = this.shuffle([...personalities]);
+    const shuffledAvatars = this.shuffle([...characterAvatars]);
 
     // Assign roles
     const roles: string[] = ['mafia', 'mafia', 'detective', 'doctor', 'civilian', 'civilian'];
@@ -144,6 +145,7 @@ export class GameEngine {
       isHuman: false,
       color: shuffledColors[i],
       hat: shuffledHats[i],
+      avatar: shuffledAvatars[i],
       position: roomPositions['dining'][i % 3],
       targetPosition: roomPositions['dining'][i % 3],
     }));
