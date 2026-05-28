@@ -52,7 +52,7 @@ export default function PlayerList({
               }`}
             >
               {/* Character avatar thumbnail */}
-              <div className="w-8 h-8 flex-shrink-0 bg-[#1f1f1f] border border-[#353535] relative overflow-hidden">
+              <div className="w-8 h-8 flex-shrink-0 relative">
                 <img
                   src={player.avatar}
                   alt=""

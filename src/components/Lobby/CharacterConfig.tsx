@@ -169,7 +169,7 @@ export default function CharacterConfig({ playerCount, onStart, onBack }: Props)
             {/* Character preview */}
             <div className="flex justify-center mb-2">
               <div
-                className="w-16 h-16 bg-[#131313] border-2 border-[#353535] relative cursor-pointer hover:border-[#e8a84c] transition-colors"
+                className="w-16 h-16 relative cursor-pointer hover:opacity-80 transition-opacity"
                 onClick={() => cycleAvatar(player.id)}
               >
                 <img

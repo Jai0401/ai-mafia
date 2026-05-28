@@ -223,8 +223,8 @@ export default function Game({ apiKey, humanMode, rolePreference, preConfiguredP
                     className="px-4 py-2 flex items-center gap-2 border-b border-[#353535]"
                     style={{ backgroundColor: state.players.find(p => p.id === activeSpeech.playerId)?.color + '20' }}
                   >
-                    <div className="w-6 h-6 bg-[#131313] border border-[#353535]">
-                      <img
+                    <div className="w-6 h-6">
+                        <img
                         src={state.players.find(p => p.id === activeSpeech.playerId)?.avatar}
                         alt=""
                         className="w-full h-full object-contain pixelated"

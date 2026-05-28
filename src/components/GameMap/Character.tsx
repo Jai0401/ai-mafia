@@ -123,7 +123,7 @@ export default function Character({ player, isRevealed, isSpeaking, isThinking, 
             <img
               src={player.avatar}
               alt={player.name}
-              className="w-full h-full object-contain pixelated"
+              className="w-full h-full object-contain pixelated drop-shadow-[2px_2px_0_rgba(0,0,0,0.8)]"
               draggable={false}
             />
             {/* Role badge when revealed */}

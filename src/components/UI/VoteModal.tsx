@@ -65,7 +65,7 @@ export default function VoteModal({
                   : 'border-[#353535] hover:border-[#555]'
               }`}
             >
-              <div className="w-8 h-8 bg-[#131313] border border-[#353535] flex-shrink-0">
+              <div className="w-8 h-8 flex-shrink-0">
                 <img
                   src={player.avatar}
                   alt=""
