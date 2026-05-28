@@ -77,9 +77,17 @@ Today's discussion so far:
 ${todaySpeeches || '  (No one has spoken yet this round)'}
 
 Recent game history:
-${recentEvents}
+${recentEvents}`;
 
-It is Day ${round}. Speak in 1-2 sentences. Stay in character. Reference specific players/events.
+  if (agent.role === 'mafia') {
+    const mafiaAllies = players.filter(p => p.role === 'mafia' && p.id !== agent.id && p.isAlive).map(p => p.name);
+    prompt += `\n\nYou are MAFIA. Your secret allies: ${mafiaAllies.join(', ') || 'none'}.
+Your objective: deceive civilians, deflect suspicion away from fellow mafia, and steer votes toward innocent players.
+If an ally is under suspicion, defend them subtly or redirect attention to someone else.
+Never reveal that you or your allies are mafia.`;
+  }
+
+  prompt += `\n\nIt is Day ${round}. Speak in 1-2 sentences. Stay in character. Reference specific players/events.
 
 Respond with JSON: {"speech": "Your dialogue here"}`;
 
@@ -178,7 +186,7 @@ export function buildVotePrompt(
   const visibleEvents = events.filter(e => e.isPublic || e.actorId === agent.id);
   const recentEvents = getRecentEvents(visibleEvents);
 
-  return `You are ${agent.name}. Time to vote.
+  let votePrompt = `You are ${agent.name}. Time to vote.
 
 ${beliefsText}
 
@@ -188,9 +196,15 @@ Today's discussion:
 ${todaySpeeches || 'No discussion today.'}
 
 Game history:
-${recentEvents}
+${recentEvents}`;
 
-Alive players you can vote for: ${aliveOthers}
+  if (agent.role === 'mafia') {
+    const mafiaAllies = players.filter(p => p.role === 'mafia' && p.id !== agent.id && p.isAlive).map(p => p.name);
+    votePrompt += `\n\nYou are MAFIA. Your secret allies: ${mafiaAllies.join(', ') || 'none'}.
+Do NOT vote for your allies. Coordinate with them by voting for the same civilian target to ensure mafia wins.`;
+  }
+
+  votePrompt += `\n\nAlive players you can vote for: ${aliveOthers}
 
 Vote to eliminate one player, or abstain.
 
@@ -205,6 +219,8 @@ Respond with JSON:
     }
   }
 }`;
+
+  return votePrompt;
 }
 
 function getRecentEvents(events: GameEvent[]): string {
