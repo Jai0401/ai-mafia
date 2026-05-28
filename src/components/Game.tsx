@@ -278,7 +278,7 @@ export default function Game({ apiKey, humanMode, rolePreference, preConfiguredP
 
           {/* Game over overlay */}
           {state.phase === 'game_over' && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`absolute inset-0 flex items-center justify-center z-20 ${state.winner === 'mafia' ? 'bg-[#c0392b]/30' : 'bg-[#e8a84c]/20'}`}>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`absolute inset-0 flex items-center justify-center z-[100] ${state.winner === 'mafia' ? 'bg-[#c0392b]/30' : 'bg-[#e8a84c]/20'}`}>
               <div className="bg-[#1b1b1b] border-2 border-[#e8a84c] p-8 text-center max-w-md">
                 <h2 className="text-3xl font-bold text-[#e8a84c] mb-4 uppercase tracking-tighter">{state.winner === 'mafia' ? 'Mafia Wins!' : 'Civilians Win!'}</h2>
                 <p className="text-[#7a7d8a] mb-6 text-sm">{state.winner === 'mafia' ? 'The Mafia has taken over the town.' : 'The town is safe... for now.'}</p>

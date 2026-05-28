@@ -119,11 +119,11 @@ export default function Character({ player, isRevealed, isSpeaking, isThinking, 
           )}
 
           {/* 8-bit character image */}
-          <div className="w-16 h-20 relative">
+          <div className="w-24 h-[120px] relative">
             <img
               src={player.avatar}
               alt={player.name}
-              className="w-full h-full object-contain pixelated drop-shadow-[2px_2px_0_rgba(0,0,0,0.8)]"
+              className="w-full h-full object-contain pixelated drop-shadow-[3px_3px_0_rgba(0,0,0,0.8)]"
               draggable={false}
             />
             {/* Role badge when revealed */}
