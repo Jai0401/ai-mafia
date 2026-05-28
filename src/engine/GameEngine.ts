@@ -4,7 +4,8 @@ import { AgentRunner } from './AgentRunner';
 import { resolveNightActions } from './ActionResolver';
 import { countVotes } from './VoteCounter';
 import { personalities } from '../data/personalities';
-import { agentNames, characterColors, hatTypes, characterAvatars } from '../data/names';
+import { getRandomNameForGender, characterColors, hatTypes, characterAvatars } from '../data/names';
+import { CHARACTER_AVATARS } from '../data/characters';
 import { roomPositions } from '../data/roomLayout';
 
 export class GameEngine {
@@ -124,8 +125,7 @@ export class GameEngine {
   }
 
   initializeGame(humanMode?: HumanMode, humanRolePreference?: string): void {
-    // Shuffle and pick 6 names, colors, hats, personalities, avatars
-    const shuffledNames = this.shuffle([...agentNames]).slice(0, 6);
+    // Shuffle avatars first, then assign gender-matched names
     const shuffledColors = this.shuffle([...characterColors]);
     const shuffledHats = this.shuffle([...hatTypes]);
     const shuffledPersonalities = this.shuffle([...personalities]);
@@ -135,20 +135,30 @@ export class GameEngine {
     const roles: string[] = ['mafia', 'mafia', 'detective', 'doctor', 'civilian', 'civilian'];
     const shuffledRoles = this.shuffle(roles);
 
-    // Create players
-    const players: Player[] = shuffledNames.map((name, i) => ({
-      id: `player-${i}`,
-      name,
-      role: shuffledRoles[i] as any,
-      personality: shuffledPersonalities[i].name,
-      isAlive: true,
-      isHuman: false,
-      color: shuffledColors[i],
-      hat: shuffledHats[i],
-      avatar: shuffledAvatars[i],
-      position: roomPositions['dining'][i % 3],
-      targetPosition: roomPositions['dining'][i % 3],
-    }));
+    // Build avatar->gender lookup
+    const avatarGenderMap = new Map<string, 'male' | 'female'>();
+    CHARACTER_AVATARS.forEach(c => avatarGenderMap.set(c.image, c.gender));
+
+    // Create players with gender-matched names
+    const usedNames = new Set<string>();
+    const players: Player[] = shuffledAvatars.map((avatar, i) => {
+      const gender = avatarGenderMap.get(avatar) ?? 'male';
+      const name = getRandomNameForGender(gender, usedNames);
+      usedNames.add(name);
+      return {
+        id: `player-${i}`,
+        name,
+        role: shuffledRoles[i] as any,
+        personality: shuffledPersonalities[i].name,
+        isAlive: true,
+        isHuman: false,
+        color: shuffledColors[i],
+        hat: shuffledHats[i],
+        avatar,
+        position: roomPositions['dining'][i % 3],
+        targetPosition: roomPositions['dining'][i % 3],
+      };
+    });
 
     // Handle human player
     let humanPlayerId: string | undefined;

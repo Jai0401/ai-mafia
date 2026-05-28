@@ -1,7 +1,8 @@
 // src/components/Lobby/CharacterConfig.tsx
 import { useState } from 'react';
 import type { Player, Role, HatType } from '../../types/game';
-import { agentNames, characterColors, hatTypes, characterAvatars } from '../../data/names';
+import { getRandomNameForGender, characterColors, hatTypes, characterAvatars } from '../../data/names';
+import { CHARACTER_AVATARS } from '../../data/characters';
 import { personalities } from '../../data/personalities';
 
 interface Props {
@@ -16,27 +17,36 @@ const roleDistribution: Record<number, Role[]> = {
   10: ['mafia', 'mafia', 'mafia', 'detective', 'doctor', 'civilian', 'civilian', 'civilian', 'civilian', 'civilian'],
 };
 
+// Avatar -> gender lookup
+const avatarGenderMap = new Map<string, 'male' | 'female'>();
+CHARACTER_AVATARS.forEach(c => avatarGenderMap.set(c.image, c.gender));
+
 function generatePlayers(count: number): Player[] {
-  const shuffledNames = [...agentNames].sort(() => Math.random() - 0.5).slice(0, count);
   const shuffledColors = [...characterColors].sort(() => Math.random() - 0.5);
   const shuffledHats = [...hatTypes].sort(() => Math.random() - 0.5);
   const shuffledPersonalities = [...personalities].sort(() => Math.random() - 0.5);
   const shuffledAvatars = [...characterAvatars].sort(() => Math.random() - 0.5);
   const roles = roleDistribution[count];
 
-  return shuffledNames.map((name, i) => ({
-    id: `player-${i}`,
-    name,
-    role: roles[i],
-    personality: shuffledPersonalities[i % personalities.length].name,
-    isAlive: true,
-    isHuman: false,
-    color: shuffledColors[i % shuffledColors.length],
-    hat: shuffledHats[i % shuffledHats.length] as HatType,
-    avatar: shuffledAvatars[i % shuffledAvatars.length],
-    position: { x: 50, y: 50 },
-    targetPosition: { x: 50, y: 50 },
-  }));
+  const usedNames = new Set<string>();
+  return shuffledAvatars.slice(0, count).map((avatar, i) => {
+    const gender = avatarGenderMap.get(avatar) ?? 'male';
+    const name = getRandomNameForGender(gender, usedNames);
+    usedNames.add(name);
+    return {
+      id: `player-${i}`,
+      name,
+      role: roles[i],
+      personality: shuffledPersonalities[i % personalities.length].name,
+      isAlive: true,
+      isHuman: false,
+      color: shuffledColors[i % shuffledColors.length],
+      hat: shuffledHats[i % shuffledHats.length] as HatType,
+      avatar,
+      position: { x: 50, y: 50 },
+      targetPosition: { x: 50, y: 50 },
+    };
+  });
 }
 
 const roleColors: Record<Role, string> = {
@@ -63,20 +73,22 @@ export default function CharacterConfig({ playerCount, onStart, onBack }: Props)
   const addPlayer = () => {
     if (players.length >= 12) return;
     const newId = `player-${players.length}`;
-    const allNames = [...agentNames, 'Nova', 'Atlas', 'Raven', 'Orion', 'Lyra', 'Cassius', 'Zara', 'Kael'];
     const usedNames = new Set(players.map(p => p.name));
-    const availableName = allNames.find(n => !usedNames.has(n)) || `Agent-${players.length + 1}`;
+
+    const avatar = characterAvatars[players.length % characterAvatars.length];
+    const gender = avatarGenderMap.get(avatar) ?? 'male';
+    const name = getRandomNameForGender(gender, usedNames);
 
     const newPlayer: Player = {
       id: newId,
-      name: availableName,
+      name,
       role: 'civilian',
       personality: personalities[0].name,
       isAlive: true,
       isHuman: false,
       color: characterColors[players.length % characterColors.length],
       hat: hatTypes[players.length % hatTypes.length] as HatType,
-      avatar: characterAvatars[players.length % characterAvatars.length],
+      avatar,
       position: { x: 50, y: 50 },
       targetPosition: { x: 50, y: 50 },
     };

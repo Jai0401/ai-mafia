@@ -5,6 +5,7 @@ export interface CharacterAvatar {
   title: string;
   image: string;
   color: string;
+  gender: 'male' | 'female';
 }
 
 export const CHARACTER_AVATARS: CharacterAvatar[] = [
@@ -14,6 +15,7 @@ export const CHARACTER_AVATARS: CharacterAvatar[] = [
     title: 'THE MYSTIC',
     image: '/images/characters/mystic.png',
     color: '#e08ac4',
+    gender: 'female',
   },
   {
     id: 'rebel',
@@ -21,6 +23,7 @@ export const CHARACTER_AVATARS: CharacterAvatar[] = [
     title: 'THE REBEL',
     image: '/images/characters/rebel.png',
     color: '#4aaa6a',
+    gender: 'male',
   },
   {
     id: 'veteran',
@@ -28,6 +31,7 @@ export const CHARACTER_AVATARS: CharacterAvatar[] = [
     title: 'THE VETERAN',
     image: '/images/characters/veteran.png',
     color: '#8b6f4e',
+    gender: 'male',
   },
   {
     id: 'elder',
@@ -35,6 +39,7 @@ export const CHARACTER_AVATARS: CharacterAvatar[] = [
     title: 'THE ELDER',
     image: '/images/characters/elder.png',
     color: '#c17e50',
+    gender: 'male',
   },
   {
     id: 'maiden',
@@ -42,6 +47,7 @@ export const CHARACTER_AVATARS: CharacterAvatar[] = [
     title: 'THE MAIDEN',
     image: '/images/characters/maiden.png',
     color: '#d4a83a',
+    gender: 'female',
   },
   {
     id: 'brawler',
@@ -49,6 +55,7 @@ export const CHARACTER_AVATARS: CharacterAvatar[] = [
     title: 'THE BRAWLER',
     image: '/images/characters/brawler.png',
     color: '#5a8aaa',
+    gender: 'male',
   },
   {
     id: 'whiz',
@@ -56,6 +63,7 @@ export const CHARACTER_AVATARS: CharacterAvatar[] = [
     title: 'THE WHIZ',
     image: '/images/characters/whiz.png',
     color: '#f39c12',
+    gender: 'male',
   },
   {
     id: 'professor',
@@ -63,6 +71,7 @@ export const CHARACTER_AVATARS: CharacterAvatar[] = [
     title: 'THE PROFESSOR',
     image: '/images/characters/professor.png',
     color: '#7a8a9a',
+    gender: 'male',
   },
   {
     id: 'director',
@@ -70,6 +79,7 @@ export const CHARACTER_AVATARS: CharacterAvatar[] = [
     title: 'THE DIRECTOR',
     image: '/images/characters/director.png',
     color: '#9b59b6',
+    gender: 'male',
   },
   {
     id: 'phantom',
@@ -77,6 +87,7 @@ export const CHARACTER_AVATARS: CharacterAvatar[] = [
     title: 'THE PHANTOM',
     image: '/images/characters/phantom.png',
     color: '#555555',
+    gender: 'female',
   },
 ];
 
