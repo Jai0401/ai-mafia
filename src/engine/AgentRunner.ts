@@ -143,10 +143,11 @@ export class AgentRunner {
   async getNightAction(
     agent: AgentState,
     action: 'mafia_kill' | 'detective_investigate' | 'doctor_protect',
+    round: number,
     events: GameEvent[],
     players: Player[],
   ): Promise<NightAction> {
-    const prompt = buildNightActionPrompt(agent, action, events, players);
+    const prompt = buildNightActionPrompt(agent, action, round, events, players);
     const response = await this.callLLMWithRetry(prompt, 150);
 
     try {
@@ -180,10 +181,11 @@ export class AgentRunner {
 
   async getVote(
     agent: AgentState,
+    round: number,
     events: GameEvent[],
     players: Player[],
   ): Promise<{ targetId: string; confidence: number; reasoning: string; stateUpdates: AgentStateDiff | null }> {
-    const prompt = buildVotePrompt(agent, events, players);
+    const prompt = buildVotePrompt(agent, round, events, players);
     const response = await this.callLLMWithRetry(prompt, 150);
 
     try {

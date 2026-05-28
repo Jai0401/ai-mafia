@@ -263,7 +263,7 @@ export class GameEngine {
       const agent = this.agents.get(leaderMafia.id);
       if (agent) {
         try {
-          const nightAction = await this.agentRunner.getNightAction(agent, 'mafia_kill', state.events, state.players);
+          const nightAction = await this.agentRunner.getNightAction(agent, 'mafia_kill', state.round, state.events, state.players);
           // Validate: mafia cannot kill other mafia
           const target = state.players.find(p => p.id === nightAction.targetId);
           const nonMafiaTargets = state.players.filter(p => p.isAlive && p.role !== 'mafia');
@@ -285,7 +285,7 @@ export class GameEngine {
       const agent = this.agents.get(aliveDetective.id);
       if (agent) {
         try {
-          const nightAction = await this.agentRunner.getNightAction(agent, 'detective_investigate', state.events, state.players);
+          const nightAction = await this.agentRunner.getNightAction(agent, 'detective_investigate', state.round, state.events, state.players);
           this.dispatch({ type: 'SUBMIT_NIGHT_ACTION', payload: nightAction });
         } catch (error) {
           console.error('Night action failed:', error);
@@ -300,7 +300,7 @@ export class GameEngine {
       const agent = this.agents.get(aliveDoctor.id);
       if (agent) {
         try {
-          const nightAction = await this.agentRunner.getNightAction(agent, 'doctor_protect', state.events, state.players);
+          const nightAction = await this.agentRunner.getNightAction(agent, 'doctor_protect', state.round, state.events, state.players);
           // Doctor cannot protect themselves
           if (nightAction.targetId === aliveDoctor.id) {
             const otherAlive = state.players.filter(p => p.isAlive && p.id !== aliveDoctor.id);
@@ -466,7 +466,7 @@ export class GameEngine {
       if (!agent) return null;
 
       try {
-        const result = await this.agentRunner.getVote(agent, state.events, state.players);
+        const result = await this.agentRunner.getVote(agent, state.round, state.events, state.players);
         return { playerId: player.id, agent, result };
       } catch (error) {
         console.error(`Vote failed for ${player.name}:`, error);

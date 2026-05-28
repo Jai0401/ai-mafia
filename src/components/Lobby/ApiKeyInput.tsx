@@ -25,6 +25,7 @@ export default function ApiKeyInput({ onKeySubmit }: Props) {
       });
 
       if (response.ok) {
+        localStorage.setItem('ai-mafia-api-key', apiKey);
         onKeySubmit(apiKey);
       } else {
         setError('Invalid API key. Please check and try again.');

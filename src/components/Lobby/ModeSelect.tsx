@@ -4,9 +4,10 @@ import type { HumanMode } from '../../types/game';
 
 interface Props {
   onModeSelect: (mode: HumanMode) => void;
+  onChangeApiKey: () => void;
 }
 
-export default function ModeSelect({ onModeSelect }: Props) {
+export default function ModeSelect({ onModeSelect, onChangeApiKey }: Props) {
   const [selectedMode, setSelectedMode] = useState<HumanMode>('spectator');
 
   const modes: { id: HumanMode; title: string; description: string; icon: string }[] = [
@@ -65,6 +66,13 @@ export default function ModeSelect({ onModeSelect }: Props) {
         className="mt-8 bg-[#e8a84c] text-[#131313] font-bold px-8 py-3 hover:bg-[#e8a84c]/90 transition-colors uppercase text-xs tracking-wider"
       >
         Continue
+      </button>
+
+      <button
+        onClick={onChangeApiKey}
+        className="mt-4 text-[#7a7d8a] text-xs uppercase tracking-wider hover:text-[#e8a84c] transition-colors"
+      >
+        Change API Key
       </button>
     </div>
   );

@@ -169,6 +169,7 @@ Respond with JSON: {"speech": "Your dialogue here"}`;
 export function buildNightActionPrompt(
   agent: AgentState,
   action: 'mafia_kill' | 'detective_investigate' | 'doctor_protect',
+  round: number,
   events: GameEvent[],
   players: Player[],
 ): string {
@@ -192,6 +193,8 @@ Non-Mafia targets: ${targetNames}
 
 Game history:
 ${recentEvents}
+
+It is Night ${round}.
 
 STRATEGY: Target the biggest threats first:
 1. Players who are too observant or leading discussions (likely Detective)
@@ -217,6 +220,8 @@ Alive players: ${aliveNames}
 Game history:
 ${recentEvents}
 
+It is Night ${round}.
+
 STRATEGY: Investigate the most suspicious players:
 1. Players who defended eliminated mafia members
 2. Players whose voting patterns protect specific people
@@ -241,6 +246,8 @@ Alive players: ${aliveNames}
 Game history:
 ${recentEvents}
 
+It is Night ${round}.
+
 STRATEGY: Protect the most valuable targets:
 1. Yourself (if you suspect you're being targeted)
 2. Players who seem like they might be Detective (very observant, asking good questions)
@@ -254,6 +261,7 @@ Respond with JSON: {"target": "player_name", "reasoning": "Why"}`;
 
 export function buildVotePrompt(
   agent: AgentState,
+  round: number,
   events: GameEvent[],
   players: Player[],
 ): string {
@@ -272,7 +280,7 @@ export function buildVotePrompt(
   const visibleEvents = events.filter(e => e.isPublic || e.actorId === agent.id);
   const recentEvents = getRecentEvents(visibleEvents);
 
-  let votePrompt = `You are ${agent.name}. Time to vote.
+  let votePrompt = `You are ${agent.name}. Time to vote. It is Day ${round}.
 
 ${beliefsText}
 

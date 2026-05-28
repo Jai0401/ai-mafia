@@ -8,32 +8,57 @@ interface Props {
 }
 
 export default function Room({ room, isLit, children }: Props) {
-  // Atmospheric gradients per room
+  // Atmospheric gradients per room — day (lit) vs night (dark)
   const getAtmosphere = () => {
     switch (room.id) {
       case 'library':
-        return {
-          bg: 'radial-gradient(ellipse at 30% 20%, #1a2744 0%, #0d1117 60%, #070a10 100%)',
-          floor: 'linear-gradient(to bottom, transparent 60%, #0a1628 100%)',
-          vignette: 'rgba(10, 20, 40, 0.5)',
-        };
+        return isLit
+          ? {
+              bg: 'radial-gradient(ellipse at 30% 20%, #2a3a5c 0%, #1a2744 50%, #0f1a2e 100%)',
+              floor: 'linear-gradient(to bottom, transparent 60%, #162238 100%)',
+              vignette: 'rgba(10, 20, 40, 0.2)',
+              svgOpacity: 0.35,
+            }
+          : {
+              bg: 'radial-gradient(ellipse at 30% 20%, #1a2744 0%, #0d1117 60%, #070a10 100%)',
+              floor: 'linear-gradient(to bottom, transparent 60%, #0a1628 100%)',
+              vignette: 'rgba(10, 20, 40, 0.5)',
+              svgOpacity: 0.2,
+            };
       case 'dining':
-        return {
-          bg: 'radial-gradient(ellipse at 50% 30%, #2a2520 0%, #1a1714 50%, #0f0d0b 100%)',
-          floor: 'linear-gradient(to bottom, transparent 55%, #1a1510 100%)',
-          vignette: 'rgba(30, 20, 10, 0.3)',
-        };
+        return isLit
+          ? {
+              bg: 'radial-gradient(ellipse at 50% 30%, #4a4035 0%, #3a3228 50%, #2a2520 100%)',
+              floor: 'linear-gradient(to bottom, transparent 55%, #322a20 100%)',
+              vignette: 'rgba(30, 20, 10, 0.15)',
+              svgOpacity: 0.35,
+            }
+          : {
+              bg: 'radial-gradient(ellipse at 50% 30%, #2a2520 0%, #1a1714 50%, #0f0d0b 100%)',
+              floor: 'linear-gradient(to bottom, transparent 55%, #1a1510 100%)',
+              vignette: 'rgba(30, 20, 10, 0.3)',
+              svgOpacity: 0.2,
+            };
       case 'parlour':
-        return {
-          bg: 'radial-gradient(ellipse at 50% 40%, #2a1818 0%, #1a0f0f 50%, #0f0808 100%)',
-          floor: 'linear-gradient(to bottom, transparent 55%, #1a0f0f 100%)',
-          vignette: 'rgba(40, 10, 10, 0.4)',
-        };
+        return isLit
+          ? {
+              bg: 'radial-gradient(ellipse at 50% 40%, #4a3030 0%, #3a2020 50%, #2a1818 100%)',
+              floor: 'linear-gradient(to bottom, transparent 55%, #322020 100%)',
+              vignette: 'rgba(40, 10, 10, 0.2)',
+              svgOpacity: 0.35,
+            }
+          : {
+              bg: 'radial-gradient(ellipse at 50% 40%, #2a1818 0%, #1a0f0f 50%, #0f0808 100%)',
+              floor: 'linear-gradient(to bottom, transparent 55%, #1a0f0f 100%)',
+              vignette: 'rgba(40, 10, 10, 0.4)',
+              svgOpacity: 0.2,
+            };
       default:
         return {
-          bg: '#0d1117',
+          bg: isLit ? '#1a1f2e' : '#0d1117',
           floor: 'none',
           vignette: 'rgba(0,0,0,0.5)',
+          svgOpacity: 0.2,
         };
     }
   };
@@ -56,7 +81,8 @@ export default function Room({ room, isLit, children }: Props) {
 
       {/* Room-specific props / furniture silhouettes */}
       <svg
-        className="absolute inset-0 w-full h-full pointer-events-none opacity-20"
+        className="absolute inset-0 w-full h-full pointer-events-none transition-opacity duration-[2000ms]"
+        style={{ opacity: atmosphere.svgOpacity }}
         viewBox="0 0 100 100"
         preserveAspectRatio="none"
       >
@@ -116,13 +142,15 @@ export default function Room({ room, isLit, children }: Props) {
         )}
       </svg>
 
-      {/* Vignette overlay */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          boxShadow: `inset 0 0 150px 60px ${atmosphere.vignette}`,
-        }}
-      />
+      {/* Vignette overlay — only during night (not lit) */}
+      {!isLit && (
+        <div
+          className="absolute inset-0 pointer-events-none transition-opacity duration-[2000ms]"
+          style={{
+            boxShadow: `inset 0 0 150px 60px ${atmosphere.vignette}`,
+          }}
+        />
+      )}
 
       {/* Dust particles / atmosphere */}
       {isLit && (

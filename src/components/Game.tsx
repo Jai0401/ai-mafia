@@ -19,9 +19,10 @@ interface Props {
   humanMode: HumanMode;
   rolePreference?: string;
   preConfiguredPlayers?: Player[];
+  onGameOver: () => void;
 }
 
-export default function Game({ apiKey, humanMode, rolePreference, preConfiguredPlayers }: Props) {
+export default function Game({ apiKey, humanMode, rolePreference, preConfiguredPlayers, onGameOver }: Props) {
   const { state, dispatch } = useGame();
   const engineRef = useRef<GameEngine | null>(null);
   const stateRef = useRef(state);
@@ -282,7 +283,7 @@ export default function Game({ apiKey, humanMode, rolePreference, preConfiguredP
               <div className="bg-[#1b1b1b] border-2 border-[#e8a84c] p-8 text-center max-w-md">
                 <h2 className="text-3xl font-bold text-[#e8a84c] mb-4 uppercase tracking-tighter">{state.winner === 'mafia' ? 'Mafia Wins!' : 'Civilians Win!'}</h2>
                 <p className="text-[#7a7d8a] mb-6 text-sm">{state.winner === 'mafia' ? 'The Mafia has taken over the town.' : 'The town is safe... for now.'}</p>
-                <button onClick={() => window.location.reload()} className="bg-[#e8a84c] text-[#131313] font-bold px-6 py-2 hover:bg-[#e8a84c]/90 transition-colors uppercase text-xs tracking-wider">Play Again</button>
+                <button onClick={onGameOver} className="bg-[#e8a84c] text-[#131313] font-bold px-6 py-2 hover:bg-[#e8a84c]/90 transition-colors uppercase text-xs tracking-wider">Play Again</button>
               </div>
             </motion.div>
           )}
